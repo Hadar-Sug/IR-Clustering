@@ -21,7 +21,7 @@ class BM25Retriever(Retriever):
         tokenised_corpus: List[Sequence[str]] = [
             self._tokenize(doc) for doc in corpus.values()
         ]
-        self._bm25 = BM25Okapi(tokenised_corpus)   # <-- consistent name
+        self._bm25 = BM25Okapi(tokenised_corpus) 
 
     # ------------------------------------------------------------------ #
     # Retriever interface
