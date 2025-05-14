@@ -5,7 +5,7 @@ from .utils.dependencies import build_pipeline
 
 if __name__ == "__main__":
     # Load configuration
-    cfg = Config.load(Path("/Users/hadar.sugarman/Documents/School/R-Clustering/config.yaml"))
+    cfg = Config.load(Path("config.yaml"))
 
     # Build the pipeline, queries, and qrels
     pipeline, queries, qrels = build_pipeline(cfg)
