@@ -14,4 +14,4 @@ class RocchioTrueFeedback(FeedbackService):
             return q_vec
         rel_centroid = np.mean([doc_vecs[d] for d in rel_ids], axis=0)
         non_centroid = np.mean([doc_vecs[d] for d in nonrel_ids], axis=0) if nonrel_ids else 0
-        return (self.alpha * q_vec + self.beta * rel_centroid - self.gamma * non_centroid)
+        return self.alpha * q_vec + self.beta * rel_centroid - self.gamma * non_centroid

@@ -10,7 +10,7 @@ from ..evaluator.trec_eval import TrecEvaluator
 from ..pipeline.pipeline import Pipeline
 
 
-def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str]]:
+def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dict[str, int]]]:
     dl = DataLoader(cfg.dataset)
     corpus = dl.load_corpus()
     queries = dl.load_queries()
@@ -22,4 +22,4 @@ def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str]]:
     fb = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma)
     evalr = TrecEvaluator(cfg.metrics)
 
-    return Pipeline(bm25, emb_ret, fb, evalr, model), queries
+    return Pipeline(bm25, emb_ret, fb, evalr, model), queries, qrels

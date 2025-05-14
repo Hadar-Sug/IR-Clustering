@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 from src.schema import DocScore
+from src.retriever.embedding import EmbeddingRetriever
+
 
 # 1) Dummy “SentenceTransformer” model that maps:
 #    “cat”→axis-0 count, “dog”→axis-1 count, then L2-normalizes.
@@ -76,7 +78,6 @@ def toy_corpus():
 
 
 def test_embedding_basic_ranking(toy_corpus):
-    from src.retriever.embedding import EmbeddingRetriever
 
     retriever = EmbeddingRetriever(model_name="dummy", corpus=toy_corpus)
     hits = retriever.search("cat", k=2)
@@ -95,7 +96,6 @@ def test_embedding_basic_ranking(toy_corpus):
 
 
 def test_embedding_oov_query(toy_corpus):
-    from src.retriever.embedding import EmbeddingRetriever
 
     retriever = EmbeddingRetriever(model_name="dummy", corpus=toy_corpus)
     hits = retriever.search("elephant", k=3)
@@ -108,7 +108,6 @@ def test_embedding_oov_query(toy_corpus):
 
 
 def test_embedding_handles_k_greater_than_docs(toy_corpus):
-    from src.retriever.embedding import EmbeddingRetriever
 
     retriever = EmbeddingRetriever(model_name="dummy", corpus=toy_corpus)
     hits = retriever.search("cat", k=10)
@@ -116,6 +115,34 @@ def test_embedding_handles_k_greater_than_docs(toy_corpus):
     # should never return more than available docs
     assert len(hits) == 3
 
+def test_doc_text_returns_original(toy_corpus):
+    r = EmbeddingRetriever("dummy", toy_corpus)
+    for doc_id, text in toy_corpus.items():
+        assert r.doc_text(doc_id) == text
+
+
+def test_search_by_vector_matches_search(toy_corpus):
+    r = EmbeddingRetriever("dummy", toy_corpus)
+    # embed the query
+    q_vec = r.model.encode("cat", normalize_embeddings=True)
+    # call both methods
+    by_vec = r.search_by_vector(q_vec, k=2)
+    by_txt = r.search("cat", k=2)
+
+    # should get same doc_ids & scores
+    assert [h.doc_id for h in by_vec] == [h.doc_id for h in by_txt]
+    assert pytest.approx([h.score for h in by_vec]) == [h.score for h in by_txt]
+
+
+def test_search_by_vector_respects_k_and_scores(toy_corpus):
+    r = EmbeddingRetriever("dummy", toy_corpus)
+    # vector exactly orthogonal yields 0 scores
+    zero_vec = np.zeros(2, dtype=np.float32)
+    hits = r.search_by_vector(zero_vec, k=3)
+    # should be ordered by how corpus vectors dot zero_vec -> all zeros
+    assert len(hits) == 3
+    assert all(isinstance(h, DocScore) for h in hits)
+    assert all(h.score == 0.0 for h in hits)
 
 def test_embedding_return_type_and_scores(toy_corpus):
     from src.retriever.embedding import EmbeddingRetriever
