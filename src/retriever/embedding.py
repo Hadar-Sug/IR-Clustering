@@ -37,7 +37,12 @@ class EmbeddingRetriever(Retriever):
 
         # 3) build inner-product index
         dim = emb.shape[1]
-        self._index = faiss.IndexFlatIP(dim)  # type: ignore
+        cpu_index = faiss.IndexFlatIP(dim)  # type: ignore
+
+        # GPU: move index to GPU
+        res = faiss.StandardGpuResources()  # use a single GPU
+        self._index = faiss.index_cpu_to_gpu(res, 0, cpu_index)  # GPU index
+
         self._index.add(emb)                  # type: ignore
 
     # ---------------------------------------------------------------- #
