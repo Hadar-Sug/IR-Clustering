@@ -1,0 +1,11 @@
+rank_bm25>=0.2
+sentence-transformers>=2.6
+pytrec_eval>=0.5
+ir-datasets>=0.5
+ir-measures>=0.3
+pydantic>=2.7
+rich>=13.7
+numpy>=1.26
+faiss-cpu>=1.7
+pytest>=8.2.0
+pytest-mock>=3.14.0
