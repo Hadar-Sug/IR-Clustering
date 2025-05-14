@@ -1,7 +1,7 @@
 from pathlib import Path
 from rich import print
-from .utils.config import Config
-from .utils.dependencies import build_pipeline
+from utils.config import Config
+from utils.dependencies import build_pipeline
 
 if __name__ == "__main__":
     # Load configuration
