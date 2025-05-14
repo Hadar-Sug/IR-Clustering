@@ -6,6 +6,6 @@ ir-measures>=0.3
 pydantic>=2.7
 rich>=13.7
 numpy>=1.26
-faiss-gpu>=1.7.4
+faiss-gpu>=1.7.2
 pytest>=8.2.0
 pytest-mock>=3.14.0
