@@ -1,6 +1,5 @@
 from sentence_transformers import SentenceTransformer
 
-from src.pipeline.pipeline import Pipeline
 from .config import Config
 from ..data_loader.loader import DataLoader
 from ..retriever.bm25 import BM25Retriever
