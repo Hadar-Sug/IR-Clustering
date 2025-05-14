@@ -14,7 +14,7 @@ if __name__ == "__main__":
     queries = dict(list(queries.items())[:2])
 
     # Limit qrels to relevant data for 10 documents only
-    limited_qrels = {qid: {doc_id: qrels[qid][doc_id] for doc_id in list(qrels[qid])[:1000]} for qid in queries if qid in qrels}
+    limited_qrels = {qid: {doc_id: qrels[qid][doc_id] for doc_id in list(qrels[qid])[:100]} for qid in queries if qid in qrels}
 
     # Run evaluation on the limited queries and qrels
     metrics = pipeline.evaluate(queries, limited_qrels, k=5)
