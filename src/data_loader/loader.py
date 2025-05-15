@@ -19,4 +19,4 @@ class DataLoader:
         return qrels
 
     def load_corpus(self) -> Dict[str, str]:
-        return {d['doc_id']: d['body'] for d in track(self.docs, description="Loading docs")}
+        return {d['doc_id']: d['text'] for d in track(self.docs, description="Loading docs")}
