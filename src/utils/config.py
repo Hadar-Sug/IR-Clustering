@@ -2,9 +2,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 import yaml
 
-
 class Config(BaseModel):
-    dataset: str = Field(default="msmarco-passage/trec-dl-2019/judged")
+    # Update default to use Hugging Face irds/msmarco-document-v2_trec-dl-2019_judged
+    dataset: str = Field(default="irds/msmarco-document-v2_trec-dl-2019_judged")
     model_name: str = "intfloat/e5-small"
     metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10"])
     alpha: float = 1.0
