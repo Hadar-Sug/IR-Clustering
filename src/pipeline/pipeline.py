@@ -1,7 +1,6 @@
 from typing import Dict
 from ..domain.interfaces import Retriever, FeedbackService, Evaluator
 
-# Add tqdm for a progress bar
 from tqdm import tqdm
 
 import torch
@@ -16,6 +15,7 @@ class Pipeline:
             embed_model,
             batch_size: int = 64,
             use_fp16: bool = False,
+            doc_corpus: dict = None,  # pass loaded corpus mapping doc_id -> text
     ):
         self.first_stage   = retriever_init
         self.emb_retriever = emb_retriever
@@ -25,6 +25,7 @@ class Pipeline:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size = batch_size
         self.use_fp16 = use_fp16
+        self.doc_corpus = doc_corpus if doc_corpus is not None else {}
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
         print(f"Running query {qid}: '{query}'")
@@ -43,12 +44,11 @@ class Pipeline:
             dtype=torch.float16 if (self.use_fp16 and self.device == "cuda") else torch.float32
         )
         doc_texts = {
-            hit.doc_id: self.emb_retriever.doc_text(hit.doc_id)
-            for hit in first_hits
+            hit.doc_id: self.doc_corpus[hit.doc_id]
+            for hit in first_hits if hit.doc_id in self.doc_corpus
         }
         doc_vecs = {}
 
-        # Batch encoding for efficiency
         doc_ids = list(doc_texts.keys())
         texts = list(doc_texts.values())
         if texts:
@@ -81,10 +81,6 @@ class Pipeline:
             qrels: Dict[str, Dict[str, int]],
             k: int = 100,
     ) -> Dict[str, float]:
-        """
-        Run the full pipeline on each query and evaluate
-        using the provided qrels.
-        """
         print("Evaluating queries...")
         run = {}
         for qid, query in tqdm(queries.items(), desc="Running queries"):
