@@ -4,6 +4,8 @@ from ..domain.interfaces import Retriever, FeedbackService, Evaluator
 # Add tqdm for a progress bar
 from tqdm import tqdm
 
+import torch
+
 class Pipeline:
     def __init__(
             self,
@@ -12,12 +14,17 @@ class Pipeline:
             feedback: FeedbackService,
             evaluator: Evaluator,
             embed_model,
+            batch_size: int = 64,
+            use_fp16: bool = False,
     ):
         self.first_stage   = retriever_init
         self.emb_retriever = emb_retriever
         self.feedback      = feedback
         self.evaluator     = evaluator
         self.embed_model   = embed_model
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.batch_size = batch_size
+        self.use_fp16 = use_fp16
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
         print(f"Running query {qid}: '{query}'")
@@ -29,17 +36,33 @@ class Pipeline:
         # 2) embed query + fetch & embed each doc text
         print("Step 2/4: Creating embeddings for query and documents...")
         q_vec = self.embed_model.encode(
-            query, convert_to_numpy=True, normalize_embeddings=True
+            query,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            device=self.device,
+            dtype=torch.float16 if (self.use_fp16 and self.device == "cuda") else torch.float32
         )
         doc_texts = {
             hit.doc_id: self.emb_retriever.doc_text(hit.doc_id)
             for hit in first_hits
         }
         doc_vecs = {}
-        for doc_id, text in tqdm(doc_texts.items(), desc="Encoding documents", leave=False):
-            doc_vecs[doc_id] = self.embed_model.encode(
-                text, convert_to_numpy=True, normalize_embeddings=True
+
+        # Batch encoding for efficiency
+        doc_ids = list(doc_texts.keys())
+        texts = list(doc_texts.values())
+        if texts:
+            doc_embeddings = self.embed_model.encode(
+                texts,
+                batch_size=self.batch_size,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                device=self.device,
+                dtype=torch.float16 if (self.use_fp16 and self.device == "cuda") else torch.float32,
+                show_progress_bar=False
             )
+            for doc_id, emb in zip(doc_ids, doc_embeddings):
+                doc_vecs[doc_id] = emb
 
         # 3) apply true‐feedback (Rocchio with qrels)
         print("Step 3/4: Applying feedback/refinement...")
