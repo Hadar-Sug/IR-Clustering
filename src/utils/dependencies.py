@@ -8,10 +8,13 @@ from ..feedback.rocchio import RocchioTrueFeedback
 from ..evaluator.trec_eval import TrecEvaluator
 from ..pipeline.pipeline import Pipeline
 
-
-
 def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dict[str, int]]]:
-    dl = DataLoader(cfg.dataset)
+    # Pass all dataset names explicitly
+    dl = DataLoader(
+        queries_name=cfg.queries_name,
+        docs_name=cfg.docs_name,
+        qrels_name=cfg.qrels_name
+    )
     corpus = dl.load_corpus()
     queries = dl.load_queries()
     qrels = dl.load_qrels()
