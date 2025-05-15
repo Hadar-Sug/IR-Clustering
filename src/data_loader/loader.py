@@ -10,17 +10,13 @@ class DataLoader:
         self.docs = load_dataset(docs_name, 'docs', split='train')
 
     def load_queries(self) -> Dict[str, str]:
-        # 'self.queries' is a DatasetDict, get the actual Dataset (split) (usually 'train')
-        dataset = self.queries['train'] if 'train' in self.queries else list(self.queries.values())[0]
-        return {q['query_id']: q['text'] for q in track(dataset, description="Loading queries")}
+        return {q['query_id']: q['text'] for q in track(self.queries, description="Loading queries")}
 
     def load_qrels(self) -> Dict[str, Dict[str, int]]:
-        dataset = self.qrels['train'] if 'train' in self.qrels else list(self.qrels.values())[0]
         qrels: Dict[str, Dict[str, int]] = {}
-        for q in track(dataset, description="Loading qrels"):
+        for q in track(self.qrels, description="Loading qrels"):
             qrels.setdefault(q['query_id'], {})[q['doc_id']] = int(q['relevance'])
         return qrels
 
     def load_corpus(self) -> Dict[str, str]:
-        dataset = self.docs['train'] if 'train' in self.docs else list(self.docs.values())[0]
-        return {d['doc_id']: d['body'] for d in track(dataset, description="Loading docs")}
+        return {d['doc_id']: d['body'] for d in track(self.docs, description="Loading docs")}
