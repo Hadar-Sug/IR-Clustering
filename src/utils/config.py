@@ -5,7 +5,7 @@ import yaml
 class Config(BaseModel):
     queries_name: str = Field(default="irds/msmarco-document-v2_trec-dl-2019")
     qrels_name: str = Field(default="irds/msmarco-document-v2_trec-dl-2019")
-    docs_name: str = Field(default="irds/msmarco-document-v2")
+    docs_name: str = Field(default="irds/msmarco-passage")
     model_name: str = "intfloat/e5-small"
     metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10"])
     alpha: float = 1.0
