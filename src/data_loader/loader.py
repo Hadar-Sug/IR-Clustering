@@ -7,7 +7,7 @@ class DataLoader:
         # Do not use defaults; require explicit parameters
         self.queries = load_dataset(queries_name, 'queries')
         self.qrels = load_dataset(qrels_name, 'qrels')
-        self.docs = load_dataset(docs_name, 'docs')
+        self.docs = load_dataset(docs_name, 'docs', split='train')
 
     def load_queries(self) -> Dict[str, str]:
         # 'self.queries' is a DatasetDict, get the actual Dataset (split) (usually 'train')
