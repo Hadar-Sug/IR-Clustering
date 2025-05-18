@@ -4,6 +4,7 @@ import yaml
 
 class Config(BaseModel):
     dataset: str = Field(default="msmarco-document/trec-dl-2019")
+    docs_path: str = Field(default="msmarco-doctest2019-top100.gz")
     model_name: str = "intfloat/e5-small"
     metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10", "recip_rank", "map"])
     alpha: float = 1.0

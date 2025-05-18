@@ -11,7 +11,8 @@ from ..pipeline.pipeline import Pipeline
 def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dict[str, int]]]:
     # Pass all dataset names explicitly
     dl = DataLoader(
-        dataset=cfg.dataset
+        dataset=cfg.dataset,
+        docs_gz_path=cfg.docs_path,
     )
     corpus = dl.load_corpus()
     queries = dl.load_queries()
