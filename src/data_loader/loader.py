@@ -52,8 +52,10 @@ class DataLoader:
         # 4) Load only the test-set documents from your local full dump
         self.docs: Dict[str, str] = {}
         with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
+            print('here')
             first_line = True
             for line in f:
+                print('here2')
                 if first_line:
                     print("First raw line:", line.rstrip("\n"))
                     first_line = False
