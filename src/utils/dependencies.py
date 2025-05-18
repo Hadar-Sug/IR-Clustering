@@ -14,7 +14,7 @@ def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dic
         queries_tsv=cfg.queries_path,
         top100_gz=cfg.top100_path,
         qrels_txt=cfg.qrels_path,
-        test_docs_gz=cfg.test_docs_path,
+        docs_trec_gz=cfg.test_docs_path,
     )
 
     # Load data
