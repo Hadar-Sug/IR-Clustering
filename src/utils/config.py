@@ -3,11 +3,9 @@ from pydantic import BaseModel, Field
 import yaml
 
 class Config(BaseModel):
-    queries_name: str = Field(default="irds/msmarco-document-v2_trec-dl-2019")
-    qrels_name: str = Field(default="irds/msmarco-document-v2_trec-dl-2019")
-    docs_name: str = Field(default="irds/msmarco-passage")
+    dataset: str = Field(default="msmarco-document/trec-dl-2019")
     model_name: str = "intfloat/e5-small"
-    metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10"])
+    metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10", "recip_rank", "map"])
     alpha: float = 1.0
     beta: float = 0.75
     gamma: float = 0.15
