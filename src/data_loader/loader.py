@@ -27,8 +27,12 @@ class DataLoader:
         self.pairs: List[Tuple[str, str, float]] = []
         self.doc_ids = set()
         with gzip.open(top100_gz, "rt", encoding="utf8") as f:
+            line_count = 0
             for line in f:
+                line_count += 1
                 parts = line.strip().split()
+                if line_count==1:
+                    print(parts)
                 if len(parts) < 5:
                     continue
                 qid, _, docid, _, score = parts[:5]
