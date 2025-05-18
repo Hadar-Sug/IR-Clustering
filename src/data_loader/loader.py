@@ -51,7 +51,7 @@ class DataLoader:
 
         # 4) Load only the test-set documents from your local full dump (.tsv after unzipping)
         self.docs: Dict[str, str] = {}
-        with open(docs_trec_gz, "r", encoding="utf8") as f:
+        with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
             for line in f:
                 # Take the first part (before first tab) and the last part (after last tab)
                 parts = line.rstrip("\n").split("\t")
