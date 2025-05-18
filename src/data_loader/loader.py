@@ -51,12 +51,31 @@ class DataLoader:
                     continue
                 qid, _, docid, rating = parts
                 self._qrels.setdefault(qid, {})[docid] = int(rating)
-        # 4) Load only the test docs from the *mini-corpus*
-        self._docs = {}
-        with gzip.open(test_docs_gz, "rt", encoding="utf8") as fh:
-            for line in fh:
-                docid, text = line.rstrip("\n").split("\t", 1)
-                self._docs[docid] = text
+            # 1) collect test doc IDs
+            out_gz = "test_docs.trec.gz"
+            doc_ids = set()
+            with gzip.open(top100_gz, "rt", encoding="utf8") as run_f:
+                for line in run_f:
+                    parts = line.split()
+                    if len(parts) < 5:
+                        continue
+                    _, _, docid, _, _ = parts[:5]
+                    doc_ids.add(docid)
+        
+            # 2) filter the big corpus down to just those IDs
+            with gzip.open(test_docs_gz, "rt", encoding="utf8") as inf, \
+                    gzip.open(test_docs_gz, "wt", encoding="utf8") as outf:
+                for lineno, line in enumerate(inf, 1):
+                    docid, text = line.rstrip("\n").split("\t", 1)
+                    if docid in doc_ids:
+                        outf.write(f"{docid}\t{text}\n")
+                    # once we’ve seen them all, we can stop early:
+                    if lineno % 1000000 == 0:
+                        print(f"Scanned {lineno:,} lines, got {len(doc_ids & set(doc_ids))} docs")
+                    if len(doc_ids) == 0:
+                        break
+        
+            print(f"Written {len(doc_ids)} docs to {out_gz}")
 
         # Sanity checks
         if len(self._queries) != 200:
