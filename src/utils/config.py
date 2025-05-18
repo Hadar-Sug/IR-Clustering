@@ -17,7 +17,7 @@ class Config(BaseModel):
         description="Plain text qrels: qid Q0 docid rating"
     )
     test_docs_path: str = Field(
-        default="msmarco-docs.trec.gz",
+        default="msmarco-docs.tsv.gz",
     )
 
     # Model & evaluation parameters

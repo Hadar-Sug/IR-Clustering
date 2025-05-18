@@ -49,17 +49,16 @@ class DataLoader:
                 qid, _, docid, rating = parts
                 self.qrels.setdefault(qid, {})[docid] = int(rating)
 
-        # 4) Load only the test-set documents from your local full dump
+        # 4) Load only the test-set documents from your local full dump (.tsv after unzipping)
         self.docs: Dict[str, str] = {}
-        with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
-            print('here')
-            first_line = True
+        with open(docs_trec_gz, "r", encoding="utf8") as f:
             for line in f:
-                print('here2')
-                if first_line:
-                    print("First raw line:", line.rstrip("\n"))
-                    first_line = False
-                docid, text = line.rstrip("\n").split("\t", 1)
+                # Take the first part (before first tab) and the last part (after last tab)
+                parts = line.rstrip("\n").split("\t")
+                if len(parts) < 2:
+                    continue  # skip malformed lines
+                docid = parts[0]
+                text = parts[-1]
                 if docid in self.doc_ids:
                     self.docs[docid] = text
                     # stop once we have fetched all test docs
