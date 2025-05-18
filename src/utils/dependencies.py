@@ -9,15 +9,20 @@ from ..evaluator.trec_eval import TrecEvaluator
 from ..pipeline.pipeline import Pipeline
 
 def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dict[str, int]]]:
-    # Pass all dataset names explicitly
+    # Initialize loader with explicit paths from config
     dl = DataLoader(
-        dataset=cfg.dataset,
-        docs_gz_path=cfg.docs_path,
+        queries_tsv=cfg.queries_path,
+        top100_gz=cfg.top100_path,
+        qrels_txt=cfg.qrels_path,
+        test_docs_gz=cfg.test_docs_path,
     )
+
+    # Load data
     corpus = dl.load_corpus()
     queries = dl.load_queries()
     qrels = dl.load_qrels()
 
+    # Build Retrieval+Feedback+Evaluation pipeline
     bm25 = BM25Retriever(corpus)
     model = SentenceTransformer(cfg.model_name)
     emb_ret = EmbeddingRetriever(cfg.model_name, corpus)

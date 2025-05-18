@@ -3,19 +3,34 @@ from pydantic import BaseModel, Field
 import yaml
 
 class Config(BaseModel):
-    dataset: str = Field(default="msmarco-document/trec-dl-2019")
-    docs_path: str = Field(default="msmarco-doctest2019-top100.gz")
-    model_name: str = "intfloat/e5-small"
+    # Paths to each of the three inputs for TREC DL-2019
+    queries_path: str = Field(
+        default="msmarco-test2019-queries.tsv.gz",
+        description="Gzipped TSV of query-id<TAB>query text"
+    )
+    top100_path: str = Field(
+        default="msmarco-doctest2019-top100.gz",
+        description="Gzipped run file: qid Q0 docid rank score runname"
+    )
+    qrels_path: str = Field(
+        default="2019qrels-docs.txt",
+        description="Plain text qrels: qid Q0 docid rating"
+    )
+    test_docs_path: str = Field(
+        default=" msmarco-docs.trec.gz",
+    )
+
+    # Model & evaluation parameters
+    model_name: str = Field(default="intfloat/e5-small")
     metrics: list[str] = Field(default_factory=lambda: ["ndcg_cut_10", "recip_rank", "map"])
-    alpha: float = 1.0
-    beta: float = 0.75
-    gamma: float = 0.15
+    alpha: float = Field(default=1.0)
+    beta: float = Field(default=0.75)
+    gamma: float = Field(default=0.15)
 
     @classmethod
     def load(cls, path: Path) -> "Config":
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
-
         data = yaml.safe_load(path.read_text()) or {}
         if not isinstance(data, dict):
             raise TypeError(

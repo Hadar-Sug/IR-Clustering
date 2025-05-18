@@ -4,41 +4,61 @@ from typing import Dict, List, Tuple
 import gzip
 
 class DataLoader:
-    def __init__(self, dataset: str, docs_gz_path: str):
-        # 1) Load queries, scoreddocs & qrels as before
-        self.ds = ir_datasets.load(dataset)
+    """
+    Loader for TREC DL-2019 test set from three local files:
+      • msmarco-test2019-queries.tsv   (TSV of qid<TAB>query)
+      • msmarco-doctest2019-top100.gz   (GZIP of space-sep runs: qid Q0 docid rank score runname)
+      • 2019qrels-docs.txt              (Plain text: qid Q0 docid rating)
+    """
+    def __init__(
+            self,
+            queries_tsv: str,
+            top100_gz:    str,
+            qrels_txt:    str,
+            test_docs_gz: str,
+    ):
+        # 1) Queries (TSV)
+        self._queries: Dict[str, str] = {}
+        with open(queries_tsv, "r", encoding="utf8") as f:
+            for line in f:
+                qid, text = line.rstrip("\n").split("\t", 1)
+                self._queries[qid] = text
 
-        self._queries = {
-            q.query_id: q.text
-            for q in track(self.ds.queries_iter(), description="Loading queries")
-        }
-
-        self._pairs = list(
-            track(self.ds.scoreddocs_iter(), description="Loading doc-score pairs")
-        )
-        self._doc_ids = {p.doc_id for p in self._pairs}
-
-        # 2) Load qrels
-        self._qrels: Dict[str, Dict[str,int]] = {}
-        for qrel in track(self.ds.qrels_iter(), description="Loading qrels"):
-            self._qrels.setdefault(qrel.query_id, {})[qrel.doc_id] = qrel.relevance
-
-        # 3) Load *only* the test docs from your local .gz
-        self._docs: Dict[str,str] = {}
-        with gzip.open(docs_gz_path, "rt", encoding="utf8") as fh:
-            for line in track(fh, description="Loading test docs"):
-                # each line is: doc_id<TAB>text
-                parts = line.rstrip("\n").split("\t", 1)
-                if len(parts) != 2:
+        # 2) Candidate run (GZIP)
+        self._pairs: List[Tuple[str, str, float]] = []
+        self.doc_ids = set()
+        with gzip.open(top100_gz, "rt", encoding="utf8") as f:
+            for line in f:
+                # expected: qid Q0 docid rank score runname
+                parts = line.strip().split()
+                if len(parts) < 5:
                     continue
-                doc_id, text = parts
-                if doc_id in self._doc_ids:
-                    self._docs[doc_id] = text
+                qid, _, docid, _, score = parts[:5]
+                self._pairs.append((qid, docid, float(score)))
+                self.doc_ids.add(docid)
 
-        # sanity check
-        missing = self._doc_ids - self._docs.keys()
-        if missing:
-            raise RuntimeError(f"Missing docs: {len(missing)} ids not found in {docs_gz_path}")
+        # 3) Qrels (plain text)
+        self._qrels: Dict[str, Dict[str,int]] = {}
+        with open(qrels_txt, "r", encoding="utf8") as f:
+            for line in f:
+                # expected: qid Q0 docid rating
+                parts = line.strip().split()
+                if len(parts) != 4:
+                    continue
+                qid, _, docid, rating = parts
+                self._qrels.setdefault(qid, {})[docid] = int(rating)
+        # 4) Load only the test docs from the *mini-corpus*
+        self._docs = {}
+        with gzip.open(test_docs_gz, "rt", encoding="utf8") as fh:
+            for line in fh:
+                docid, text = line.rstrip("\n").split("\t", 1)
+                self._docs[docid] = text
+
+        # Sanity checks
+        if len(self._queries) != 200:
+            raise RuntimeError(f"Expected 200 queries, found {len(self._queries)}")
+        if len(self._pairs) != 200 * 100:
+            raise RuntimeError(f"Expected 20 000 run pairs, found {len(self._pairs)}")
 
     def load_queries(self) -> Dict[str, str]:
         return self._queries
