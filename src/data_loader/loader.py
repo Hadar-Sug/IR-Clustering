@@ -17,9 +17,13 @@ class DataLoader:
             qrels_txt:    str,
             test_docs_gz: str,
     ):
-        # 1) Queries (TSV)
+        # 1) Queries (TSV, possibly gzipped)
         self._queries: Dict[str, str] = {}
-        with open(queries_tsv, "r", encoding="utf8") as f:
+        if queries_tsv.endswith('.gz'):
+            open_fn = lambda path: gzip.open(path, "rt", encoding="utf8")
+        else:
+            open_fn = lambda path: open(path, "r", encoding="utf8")
+        with open_fn(queries_tsv) as f:
             for line in f:
                 qid, text = line.rstrip("\n").split("\t", 1)
                 self._queries[qid] = text
