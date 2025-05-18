@@ -13,10 +13,15 @@ class DataLoader:
     ):
         # 1) Queries
         self.queries: Dict[str, str] = {}
-        with open(queries_tsv, "r", encoding="utf8") as f:
+        if queries_tsv.endswith('.gz'):
+            open_fn = lambda path: gzip.open(path, "rt", encoding="utf8")
+        else:
+            open_fn = lambda path: open(path, "r", encoding="utf8")
+        with open_fn(queries_tsv) as f:
             for line in f:
                 qid, text = line.rstrip("\n").split("\t", 1)
                 self.queries[qid] = text
+
 
         # 2) Candidate run
         self.pairs: List[Tuple[str, str, float]] = []
