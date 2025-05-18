@@ -34,9 +34,6 @@ class DataLoader:
                 doc_id, text = parts
                 if doc_id in self._doc_ids:
                     self._docs[doc_id] = text
-                    # once we've got them all, stop reading
-                    if len(self._docs) >= len(self._doc_ids):
-                        break
 
         # sanity check
         missing = self._doc_ids - self._docs.keys()
