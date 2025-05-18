@@ -51,12 +51,21 @@ class DataLoader:
                     continue
                 qid, _, docid, rating = parts
                 self._qrels.setdefault(qid, {})[docid] = int(rating)
-        # 4) Load only the test docs from the *mini-corpus*
-        self._docs = {}
-        with gzip.open(test_docs_gz, "rt", encoding="utf8") as fh:
-            for line in fh:
+
+        # 2) filter the big corpus down to just those IDs
+        with gzip.open(test_docs_gz, "rt", encoding="utf8") as inf, \
+                gzip.open("mini_corpus", "wt", encoding="utf8") as outf:
+            for lineno, line in enumerate(inf, 1):
                 docid, text = line.rstrip("\n").split("\t", 1)
-                self._docs[docid] = text
+                if docid in self.doc_ids:
+                    outf.write(f"{docid}\t{text}\n")
+                # once we’ve seen them all, we can stop early:
+                if lineno % 1000000 == 0:
+                    print(f"Scanned {lineno:,} lines, got {len(self.doc_ids & set(self.doc_ids))} docs")
+                if len(self.doc_ids) == 0:
+                    break
+    
+        print(f"Written {len(self.doc_ids)} docs to mini corpus")
 
         # Sanity checks
         if len(self._queries) != 200:
