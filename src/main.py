@@ -40,7 +40,7 @@ if __name__ == "__main__":
     for label, pipeline in variants:
         print(f"\n[bold blue]{label}[/bold blue]")
         run = {qid: pipeline.run_query(qid, query, k=10) for qid, query in queries.items()}
-
+        print(run)
         metrics = pipeline.evaluator.evaluate(run, qrels)
         metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
         macro = {}
