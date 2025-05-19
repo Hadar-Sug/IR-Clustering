@@ -53,6 +53,13 @@ if __name__ == "__main__":
         print(run)
 
         print(f"\nEvaluating {label}...")
+
+        # Print first 5 qrels
+        print("Sample of qrels (up to 5):")
+        qrels_items = list(qrels.items())[:5]
+        for qid, relevance in qrels_items:
+            print(f"Query {qid}: {relevance}")
+
         metrics = pipeline.evaluator.evaluate(run, qrels)
         print(f"Raw metrics: {metrics}")
 
