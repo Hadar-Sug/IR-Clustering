@@ -24,14 +24,13 @@ if __name__ == "__main__":
     evaluator    = pipe.evaluator
     corpus       = pipe.doc_corpus
 
-    # Build feedback variants if needed
-    rocchio3 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma)
-    rocchio5 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma)
-    # (If RocchioTrueFeedback takes different arguments for different k, supply as needed)
+    # Build feedback variants with correct k for top-k relevant
+    rocchio3 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma, k=3)
+    rocchio5 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma, k=5)
 
     # Assemble configurations for ablation
     variants = [
-        ("BM25 retrieval only",      type(pipe)(bm25, bm25,            None,     evaluator, embed_model, doc_corpus=corpus)),
+        ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
         ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
         ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
         ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
@@ -39,12 +38,35 @@ if __name__ == "__main__":
 
     for label, pipeline in variants:
         print(f"\n[bold blue]{label}[/bold blue]")
-        run = {qid: pipeline.run_query(qid, query, k=10) for qid, query in queries.items()}
+        print(f"Processing queries for {label}...")
+
+        run = {}
+        for qid, query in queries.items():
+            print(f"\nQuery {qid}: {query}")
+            results = pipeline.run_query(qid, query, k=10)
+            print(f"Top 10 results for query {qid}:")
+            for docid, score in results.items():
+                print(f"  {docid}: {score:.4f}")
+            run[qid] = results
+
+        print(f"\nFull run results for {label}:")
         print(run)
+
+        print(f"\nEvaluating {label}...")
         metrics = pipeline.evaluator.evaluate(run, qrels)
+        print(f"Raw metrics: {metrics}")
+
         metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
+        print(f"Metric names found: {metric_names}")
+
         macro = {}
         for metric in metric_names:
+            print(f"\nCalculating macro average for {metric}...")
             scores = [qres.get(metric, 0.0) for qres in metrics.values()]
+            print(f"Individual scores: {scores}")
             macro[metric] = statistics.mean(scores) if scores else 0.0
             print(f"{metric}: {macro[metric]:.4f}")
+
+        print(f"\nFinal macro metrics for {label}:")
+        for metric, score in macro.items():
+            print(f"{metric}: {score:.4f}")

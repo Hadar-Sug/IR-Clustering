@@ -28,11 +28,20 @@ class Pipeline:
         self.doc_corpus    = doc_corpus if doc_corpus is not None else {}
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
-        # 1) Initial retrieval
-        first_hits = self.first_stage.search(query, k)
-        # If no feedback and emb_retriever is just BM25, return these
-        if self.feedback is None and self.emb_retriever is self.first_stage:
+        # Case 1: Pure BM25 baseline
+        if self.feedback is None and self.emb_retriever is self.first_stage and hasattr(self.first_stage, "search"):
+            first_hits = self.first_stage.search(query, k)
             return {hit.doc_id: hit.score for hit in first_hits}
+        
+        # Case 2: Pure embedding baseline (dense) -- we run embedding retriever directly
+        if self.feedback is None and self.first_stage is self.emb_retriever:
+            # 'EmbeddingRetriever' must have 'search' working in embedding space
+            first_hits = self.emb_retriever.search(query, k)
+            return {hit.doc_id: hit.score for hit in first_hits}
+        
+        # Case 3: Feedback or reranking (hybrids)
+        # 1) Initial retrieval (could be BM25 or dense)
+        first_hits = self.first_stage.search(query, k)
 
         # 2) Embed query & docs
         q_vec = self.embed_model.encode(
