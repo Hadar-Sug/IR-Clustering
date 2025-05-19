@@ -39,5 +39,5 @@ class Evaluator(Protocol):
             self,
             run: Dict[str, Dict[str, float]],
             qrels: Dict[str, Dict[str, int]]
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Dict[str, float]]:
         ...
