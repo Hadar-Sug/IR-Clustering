@@ -22,4 +22,8 @@ if __name__ == "__main__":
     # Print evaluation results
     print("[bold green]Evaluation Results[/bold green]")
     for qid, m in metrics.items():
-        print(qid, m["ndcg_cut_5"])
+        output = [f"{qid}:"]
+        for metric in cfg.metrics:
+            if metric in m:
+                output.append(f"{metric}={m[metric]}")
+        print(" ".join(output))
