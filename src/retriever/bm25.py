@@ -40,4 +40,6 @@ class BM25Retriever(Retriever):
             (DocScore(did, score) for did, score in zip(self.doc_ids, scores)),
             key=lambda x: (-x.score, x.doc_id)
         )
+        print("First 5 ranked results:", ranked[:5])
+
         return ranked[:k]
