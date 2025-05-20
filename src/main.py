@@ -11,13 +11,13 @@ if __name__ == "__main__":
 
     # Build main pipeline and get data
     pipe, queries, qrels = build_pipeline(cfg)
-    print(f"qrels: {qrels}")
+    # print(f"qrels: {qrels}")
 
     # Optionally subsample for dev/quick run
     queries = dict(list(queries.items())[:2])
     qrels = {qid: qrels[qid] for qid in queries if qid in qrels}
-
-    # Extract ready-built resources/releases from pipeline for variants
+    print(f"qrels: {qrels}")
+# Extract ready-built resources/releases from pipeline for variants
     bm25         = pipe.first_stage
     emb_retriever= pipe.emb_retriever
     embed_model  = pipe.embed_model
