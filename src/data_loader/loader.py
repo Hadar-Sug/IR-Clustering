@@ -39,15 +39,17 @@ class DataLoader:
                 self.pairs.append((qid, docid, float(score)))
                 self.doc_ids.add(docid)
 
-        # 3) Qrels
-        self.qrels: Dict[str, Dict[str,int]] = {}
+        # 3) Qrels - formatted as { qid: { docid: relevance_int, ... }, ... }
+        self.qrels: Dict[str, Dict[str, int]] = {}
         with open(qrels_txt, "r", encoding="utf8") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) != 4:
                     continue
                 qid, _, docid, rating = parts
-                self.qrels.setdefault(qid, {})[docid] = int(rating)
+                if qid not in self.qrels:
+                    self.qrels[qid] = {}
+                self.qrels[qid][docid] = int(rating)
 
         # 4) Load only the test-set documents from your local full dump (.tsv after unzipping)
         self.docs: Dict[str, str] = {}
