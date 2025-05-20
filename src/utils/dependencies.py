@@ -25,7 +25,7 @@ def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dic
     # Build Retrieval+Feedback+Evaluation pipeline
     bm25 = BM25Retriever(corpus)
     model = SentenceTransformer(cfg.model_name)
-    emb_ret = EmbeddingRetriever(cfg.model_name, corpus)
+    emb_ret = EmbeddingRetriever(cfg.model_name, corpus, cfg.index_path)
     fb = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma)
     evalr = TrecEvaluator(cfg.metrics)
 

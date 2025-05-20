@@ -19,6 +19,11 @@ class Config(BaseModel):
     test_docs_path: str = Field(
         default="msmarco-docs.tsv.gz",
     )
+    
+    index_path: str = Field(
+        default="faiss.index",
+        description="Path to save/load FAISS index"
+    )
 
     # Model & evaluation parameters
     model_name: str = Field(default="intfloat/e5-small")
