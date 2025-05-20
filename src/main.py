@@ -13,13 +13,11 @@ if __name__ == "__main__":
     pipe, queries, qrels = build_pipeline(cfg)
     # print(f"qrels: {qrels}")
 
-    # Optionally subsample for dev/quick run
-    
-    qrels = {qid: qrels[qid] for qid in queries if qid in qrels}
-    print(f"qrels keys: {qrels.keys()}")
-    missing_keys = [qid for qid in queries.keys() if qid not in qrels]
-    print(f"Query keys not in qrels: {missing_keys}")
-    exit(0)
+    # Filter queries to only those with matching qrels
+    queries = {qid: query for qid, query in queries.items() if qid in qrels}
+    qrels = {qid: qrels[qid] for qid in queries}
+
+    print(f"Filtered to {len(queries)} queries with matching qrels")
 # Extract ready-built resources/releases from pipeline for variants
     bm25         = pipe.first_stage
     emb_retriever= pipe.emb_retriever
