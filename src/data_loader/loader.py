@@ -46,7 +46,6 @@ class DataLoader:
                 parts = line.strip().split()
                 if len(parts) != 4:
                     continue
-                print(parts)    
                 qid, _, docid, rating = parts
                 self.qrels.setdefault(qid, {})[docid] = int(rating)
 
