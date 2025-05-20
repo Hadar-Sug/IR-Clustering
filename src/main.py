@@ -18,6 +18,7 @@ if __name__ == "__main__":
     qrels = {qid: qrels[qid] for qid in queries}
 
     print(f"Filtered to {len(queries)} queries with matching qrels")
+    exit(0)
 # Extract ready-built resources/releases from pipeline for variants
     bm25         = pipe.first_stage
     emb_retriever= pipe.emb_retriever
