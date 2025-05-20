@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
     # Build main pipeline and get data
     pipe, queries, qrels = build_pipeline(cfg)
+    print(qrels)
 
     # Optionally subsample for dev/quick run
     queries = dict(list(queries.items())[:2])
