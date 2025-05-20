@@ -14,9 +14,10 @@ if __name__ == "__main__":
     # print(f"qrels: {qrels}")
 
     # Optionally subsample for dev/quick run
-    queries = dict(list(queries.items())[:2])
+    
     qrels = {qid: qrels[qid] for qid in queries if qid in qrels}
     print(f"qrels: {qrels}")
+    exit(0)
 # Extract ready-built resources/releases from pipeline for variants
     bm25         = pipe.first_stage
     emb_retriever= pipe.emb_retriever
