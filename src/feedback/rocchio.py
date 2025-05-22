@@ -20,7 +20,7 @@ class RocchioTrueFeedback(FeedbackService):
         scored_rel = [(d, doc_vecs[d]) for d in rel_ids]
         
         # Use only the first k relevant docs
-        if self.k is not None:
+        if self.top_k_relevant_docs is not None:
             scored_rel = scored_rel[:self.top_k_relevant_docs]
         
         top_rel_vecs = [vec for _, vec in scored_rel]
