@@ -51,7 +51,7 @@ if __name__ == "__main__":
         for label, pipeline in variants:
             run = {}
             for qid, query in queries.items():
-                results = pipeline.run_query(qid, query, k=100)
+                results = pipeline.run_query(qid, query, k=1000)
                 run[qid] = results
 
             metrics = pipeline.evaluator.evaluate(run, qrels)
