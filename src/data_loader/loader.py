@@ -16,6 +16,7 @@ class DataLoader:
         if queries_tsv.endswith('.gz'):
             open_fn = lambda path: gzip.open(path, "rt", encoding="utf8")
         else:
+        
             open_fn = lambda path: open(path, "r", encoding="utf8")
         with open_fn(queries_tsv) as f:
             for line in f:
