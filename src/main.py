@@ -1,6 +1,5 @@
 from pathlib import Path
 import statistics
-from rich import print
 import csv
 
 from .utils.config import Config
