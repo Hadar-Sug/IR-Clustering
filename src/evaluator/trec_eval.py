@@ -9,5 +9,4 @@ class TrecEvaluator(Evaluator):
     def evaluate(self, run: Dict[str, Dict[str, float]], qrels: Dict[str, Dict[str, int]]):
         evaluator = pytrec_eval.RelevanceEvaluator(qrels, self.metrics)
         results = evaluator.evaluate(run)
-        print("Evaluation Results:", results)
         return results
