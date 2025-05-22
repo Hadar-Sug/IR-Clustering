@@ -1,82 +1,83 @@
 from pathlib import Path
 import statistics
 from rich import print
+import csv
 
 from .utils.config import Config
 from .utils.dependencies import build_pipeline, RocchioTrueFeedback
 
-
 if __name__ == "__main__":
-    cfg = Config.load(Path("config.yaml"))
-
-    # Build main pipeline and get data
-    pipe, queries, qrels = build_pipeline(cfg)
-    # print(f"qrels: {qrels}")
-
-    # Filter queries to only those with matching qrels
-    queries = {qid: query for qid, query in queries.items() if qid in qrels}
-    qrels = {qid: qrels[qid] for qid in queries}
-
-    print(f"Filtered to {len(queries)} queries with matching qrels")
-    exit(0)
-# Extract ready-built resources/releases from pipeline for variants
-    bm25         = pipe.first_stage
-    emb_retriever= pipe.emb_retriever
-    embed_model  = pipe.embed_model
-    feedback     = pipe.feedback
-    evaluator    = pipe.evaluator
-    corpus       = pipe.doc_corpus
-
-    # Build feedback variants with correct k for top-k relevant
-    rocchio3 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma, k=3)
-    rocchio5 = RocchioTrueFeedback(qrels, cfg.alpha, cfg.beta, cfg.gamma, k=5)
-
-    # Assemble configurations for ablation
-    variants = [
-        ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
-        ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
-        ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
-        ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
+    # List of config files to iterate over
+    config_files = [
+        "2019_dl_config.yml",
+        "2020_dl_config.yml"
     ]
 
-    for label, pipeline in variants:
-        print(f"\n[bold blue]{label}[/bold blue]")
-        print(f"Processing queries for {label}...")
+    for config_file in config_files:
+        # Load current config
+        cfg = Config.load(Path(config_file))
 
-        run = {}
-        for qid, query in queries.items():
-            print(f"\nQuery {qid}: {query}")
-            results = pipeline.run_query(qid, query, k=10)
-            print(f"Top 10 results for query {qid}:")
-            for docid, score in results.items():
-                print(f"  {docid}: {score:.4f}")
-            run[qid] = results
+        # Build main pipeline and get data
+        pipe, queries, qrels = build_pipeline(cfg)
 
-        print(f"\nFull run results for {label}:")
-        print(run)
+        # Filter queries to only those with matching qrels
+        queries = {qid: query for qid, query in queries.items() if qid in qrels}
+        qrels = {qid: qrels[qid] for qid in queries}
 
-        print(f"\nEvaluating {label}...")
+        print(f"[bold yellow]\n=== Results for {config_file} ===[/bold yellow]")
+        print(f"Filtered to {len(queries)} queries with matching qrels")
 
-        # Print first 5 qrels
-        print("Sample of qrels (up to 5):")
-        qrels_items = list(qrels.items())[:5]
-        for qid, relevance in qrels_items:
-            print(f"Query {qid}: {relevance}")
+        # Extract ready-built resources/releases from the pipeline for variants
+        bm25 = pipe.first_stage
+        emb_retriever = pipe.emb_retriever
+        embed_model = pipe.embed_model
+        feedback = pipe.feedback
+        evaluator = pipe.evaluator
+        corpus = pipe.doc_corpus
 
-        metrics = pipeline.evaluator.evaluate(run, qrels)
-        print(f"Raw metrics: {metrics}")
+        # Build feedback variants with correct k for top-k relevant
+        rocchio3 = RocchioTrueFeedback(qrels, 3, cfg.alpha, cfg.beta)
+        rocchio5 = RocchioTrueFeedback(qrels, 5, cfg.alpha, cfg.beta)
 
-        metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
-        print(f"Metric names found: {metric_names}")
+        # Assemble configurations for ablation
+        variants = [
+            ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
+            ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
+            ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
+            ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
+        ]
 
-        macro = {}
-        for metric in metric_names:
-            print(f"\nCalculating macro average for {metric}...")
-            scores = [qres.get(metric, 0.0) for qres in metrics.values()]
-            print(f"Individual scores: {scores}")
-            macro[metric] = statistics.mean(scores) if scores else 0.0
-            print(f"{metric}: {macro[metric]:.4f}")
+        final_results = []
 
-        print(f"\nFinal macro metrics for {label}:")
-        for metric, score in macro.items():
-            print(f"{metric}: {score:.4f}")
+        for label, pipeline in variants:
+            run = {}
+            for qid, query in queries.items():
+                results = pipeline.run_query(qid, query, k=10)
+                run[qid] = results
+
+            metrics = pipeline.evaluator.evaluate(run, qrels)
+            metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
+
+            macro = {}
+            for metric in metric_names:
+                scores = [qres.get(metric, 0.0) for qres in metrics.values()]
+                macro[metric] = statistics.mean(scores) if scores else 0.0
+
+            macro["label"] = label
+            final_results.append(macro)
+
+        # Print table
+        if final_results:
+            print("\n=== Results Table ===")
+            header = ["label"] + [m for m in final_results[0] if m != "label"]
+            print("\t".join(header))
+            for row in final_results:
+                print("\t".join(f"{row[m]:.4f}" if m != "label" else str(row[m]) for m in header))
+
+            # Save results to a file based on the config file name
+            csv_name = f"{Path(config_file).stem}_results.csv"
+            with open(csv_name, "w", newline="", encoding="utf8") as f:
+                writer = csv.DictWriter(f, fieldnames=header)
+                writer.writeheader()
+                for row in final_results:
+                    writer.writerow({k: row[k] for k in header})

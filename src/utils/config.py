@@ -10,7 +10,7 @@ class Config(BaseModel):
     )
     top100_path: str = Field(
         default="msmarco-doctest2019-top100.gz",
-        description="Gzipped run file: qid Q0 docid rank score runname"
+        description="Gzipped run file: qid Q0 docid rank score"
     )
     qrels_path: str = Field(
         default="2019qrels-docs.txt",
