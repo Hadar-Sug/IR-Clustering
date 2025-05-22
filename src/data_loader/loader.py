@@ -7,7 +7,6 @@ class DataLoader:
     def __init__(
             self,
             queries_tsv: str,
-            top100_gz:    str,
             qrels_txt:    str,
             docs_trec_gz: str,
     ):
@@ -26,17 +25,6 @@ class DataLoader:
 
         # 2) Candidate run
         self.pairs: List[Tuple[str, str, float]] = []
-        self.doc_ids = set()
-        with gzip.open(top100_gz, "rt", encoding="utf8") as f:
-            line_count = 0
-            for line in f:
-                line_count += 1
-                parts = line.strip().split()
-                if len(parts) < 5:
-                    continue
-                qid, _, docid, _, score = parts[:5]
-                self.pairs.append((qid, docid, float(score)))
-                self.doc_ids.add(docid)
 
         # 3) Qrels - formatted as { qid: { docid: relevance_int, ... }, ... }
         self.qrels: Dict[str, Dict[str, int]] = {}
@@ -60,13 +48,7 @@ class DataLoader:
                     continue  # skip malformed lines
                 docid = parts[0]
                 text = parts[-1]
-                if docid in self.doc_ids:
-                    self.docs[docid] = text
-
-        # Sanity check
-        missing = self.doc_ids - self.docs.keys()
-        if missing:
-            raise RuntimeError(f"Missing {len(missing)} docs in {docs_trec_gz}: {missing}")
+                self.docs[docid] = text
 
     def load_queries(self) -> Dict[str, str]:
         return self.queries
