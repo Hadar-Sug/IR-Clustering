@@ -9,8 +9,7 @@ from .utils.dependencies import build_pipeline, RocchioTrueFeedback
 if __name__ == "__main__":
     # List of config files to iterate over
     config_files = [
-        "2019_dl_config.yml",
-        "2020_dl_config.yml"
+        "2019_dl_config_a_0_5_b_1.yml",
     ]
 
     for config_file in config_files:
@@ -52,7 +51,7 @@ if __name__ == "__main__":
         for label, pipeline in variants:
             run = {}
             for qid, query in queries.items():
-                results = pipeline.run_query(qid, query, k=20)
+                results = pipeline.run_query(qid, query, k=50)
                 run[qid] = results
 
             metrics = pipeline.evaluator.evaluate(run, qrels)
