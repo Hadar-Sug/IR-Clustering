@@ -56,6 +56,7 @@ if __name__ == "__main__":
                 run[qid] = results
 
             metrics = pipeline.evaluator.evaluate(run, qrels)
+            print(metrics)
             metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
 
             macro = {}
