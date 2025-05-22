@@ -32,8 +32,6 @@ class DataLoader:
             for line in f:
                 line_count += 1
                 parts = line.strip().split()
-                if line_count==1:
-                    print(parts)
                 if len(parts) < 5:
                     continue
                 qid, _, docid, _, score = parts[:5]
@@ -64,9 +62,6 @@ class DataLoader:
                 text = parts[-1]
                 if docid in self.doc_ids:
                     self.docs[docid] = text
-                    # stop once we have fetched all test docs
-                    if len(self.docs) == len(self.doc_ids):
-                        break
 
         # Sanity check
         missing = self.doc_ids - self.docs.keys()
