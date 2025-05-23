@@ -31,4 +31,4 @@ def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dic
     fb = RocchioTrueFeedback(qrels,3, cfg.alpha, cfg.beta)
     evalr = TrecEvaluator(cfg.metrics)
 
-    return Pipeline(bm25, emb_ret, fb, evalr, model), queries, qrels
+    return Pipeline(bm25, emb_ret, fb, evalr, model,corpus), queries, qrels
