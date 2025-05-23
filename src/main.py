@@ -50,7 +50,7 @@ if __name__ == "__main__":
         for label, pipeline in variants:
             run = {}
             # Wrap queries.items() with list() to allow slicing
-            for qid, query in list(queries.items())[:5]:
+            for qid, query in list(queries.items()):
                 results = pipeline.run_query(qid, query, k=10)
                 run[qid] = results
 
