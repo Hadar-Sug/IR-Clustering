@@ -6,10 +6,9 @@ from .utils.config import Config
 from .utils.dependencies import build_pipeline, RocchioTrueFeedback
 
 if __name__ == "__main__":
-    # List of config files to iterate over
-    config_files = [
-        "2019_dl_config_a_0_5_b_1.yml",
-    ]
+    # Automatically gather all .yml files at the repo root (where main.py's parent is '..')
+    root = Path(__file__).parent.parent
+    config_files = [str(f) for f in root.glob("*.yml")]
 
     for config_file in config_files:
         # Load current config
@@ -49,7 +48,6 @@ if __name__ == "__main__":
 
         for label, pipeline in variants:
             run = {}
-            # Wrap queries.items() with list() to allow slicing
             for qid, query in list(queries.items()):
                 results = pipeline.run_query(qid, query, k=10)
                 run[qid] = results

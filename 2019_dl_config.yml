@@ -3,6 +3,7 @@ queries_path: msmarco-test2019-queries.tsv.gz      # Gzipped TSV: qid<TAB>query
 top100_path: msmarco-doctest2019-top100.gz         # Gzipped run: qid Q0 docid rank score
 qrels_path: 2019qrels-docs.txt                     # Plain-text qrels: qid Q0 docid rating
 test_docs_path: msmarco-docs.tsv.gz                # Gzipped TREC collection (TSV)
+docs_json_path: docs.json                     # JSON file with docid and content
 
 # -------- FAISS index --------
 index_path: faiss.index                             # Where to save / load the FAISS index

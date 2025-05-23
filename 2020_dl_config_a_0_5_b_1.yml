@@ -14,5 +14,5 @@ metrics:                                            # pytrec_eval metrics
   - ndcg_cut_10
   - recip_rank
   - map
-alpha: 1.0
-beta: 0.75
+alpha: 0.5
+beta: 1
