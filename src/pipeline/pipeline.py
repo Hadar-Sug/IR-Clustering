@@ -42,7 +42,7 @@ class Pipeline:
         # Case 3: Feedback or reranking (hybrids)
         # 1) Initial retrieval (could be BM25 or dense)
         first_hits = self.first_stage.search(query, k)
-
+        
         # 2) Embed query & docs
         q_vec = self.embed_model.encode(
             query,
@@ -60,9 +60,9 @@ class Pipeline:
         doc_vecs = {}
         doc_ids = list(doc_texts.keys())
         texts = list(doc_texts.values())
-        print(f"Encoding {len(texts)} documents")
-        print(f"Sample document text: {texts[0][:100]}..." if texts else "No documents found")
-        print(f"Doc IDs to encode: {doc_ids[:5]}..." if doc_ids else "No doc IDs")
+        #print(f"Encoding {len(texts)} documents")
+        #print(f"Sample document text: {texts[0][:100]}..." if texts else "No documents found")
+        #print(f"Doc IDs to encode: {doc_ids[:5]}..." if doc_ids else "No doc IDs")
         if texts:
             doc_embeddings = self.embed_model.encode(
                 texts,

@@ -58,10 +58,12 @@ class DataLoader:
                 parts = line.rstrip("\n").split("\t")
                 if len(parts) < 2:
                     continue  # skip malformed lines
+                print(f"Processing doc ID: {parts[0]}")
                 docid = parts[0]
                 text = parts[-1]
                 if docid in self.doc_ids:
                     self.docs[docid] = text
+                    
 
         # Sanity check
         missing = self.doc_ids - self.docs.keys()

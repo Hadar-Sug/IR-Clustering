@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
         for label, pipeline in variants:
             run = {}
-            for qid, query in queries.items():
+            for qid, query in queries[:5].items():
                 results = pipeline.run_query(qid, query, k=10)
                 run[qid] = results
 
