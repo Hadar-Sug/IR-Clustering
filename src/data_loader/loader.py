@@ -2,6 +2,8 @@ import ir_datasets
 from rich.progress import track
 from typing import Dict, List, Tuple
 import gzip
+import os
+import json
 
 class DataLoader:
     def __init__(
@@ -10,6 +12,7 @@ class DataLoader:
             top100_gz:    str,
             qrels_txt:    str,
             docs_trec_gz: str,
+            docs_json_path: str,     # ⬅️ Add path argument
     ):
         # 1) Queries
         self.queries: Dict[str, str] = {}
@@ -52,19 +55,31 @@ class DataLoader:
 
         # 4) Load only the test-set documents from your local full dump (.tsv after unzipping)
         self.docs: Dict[str, str] = {}
-        with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
-            for line in f:
-                # Take the first part (before first tab) and the last part (after last tab)
-                parts = line.rstrip("\n").split("\t")
-                if len(parts) < 2:
-                    continue  # skip malformed lines
-                docid = parts[0]
-                text = parts[-1]
-                if docid in self.doc_ids:
-                    self.docs[docid] = text
-                    
+        self.json_path = docs_json_path
 
-        # Sanity check
+        if os.path.exists(self.json_path):
+            # Load docs dict directly from json if available
+            with open(self.json_path, "r", encoding="utf8") as jf:
+                try:
+                    self.docs = json.load(jf)
+                except json.JSONDecodeError:
+                    self.docs = {}
+        else:
+            # Normal loading from gz file
+            with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
+                for line in f:
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) < 2:
+                        continue  # skip malformed lines
+                    docid = parts[0]
+                    text = parts[-1]
+                    if docid in self.doc_ids:
+                        self.docs[docid] = text
+            # dump to json for future use
+            with open(self.json_path, "w", encoding="utf8") as jf:
+                json.dump(self.docs, jf)
+
+        # Sanity check (existing)
         missing = self.doc_ids - self.docs.keys()
         if missing:
             raise RuntimeError(f"Missing {len(missing)} docs in {docs_trec_gz}: {missing}")
