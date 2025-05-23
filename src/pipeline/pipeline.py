@@ -13,9 +13,9 @@ class Pipeline:
             feedback: FeedbackService,
             evaluator: Evaluator,
             embed_model,
+            doc_corpus: dict,
             batch_size: int = 64,
             use_fp16: bool = False,
-            doc_corpus: dict = None,
     ):
         self.first_stage   = retriever_init
         self.emb_retriever = emb_retriever
@@ -25,7 +25,7 @@ class Pipeline:
         self.device        = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size    = batch_size
         self.use_fp16      = use_fp16
-        self.doc_corpus    = doc_corpus if doc_corpus is not None else {}
+        self.doc_corpus    = doc_corpus
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
         # Case 1: Pure BM25 baseline
@@ -42,7 +42,8 @@ class Pipeline:
         # Case 3: Feedback or reranking (hybrids)
         # 1) Initial retrieval (could be BM25 or dense)
         first_hits = self.first_stage.search(query, k)
-        
+        print(f"Document corpus keys: {list(self.doc_corpus.keys())}")
+
         # 2) Embed query & docs
         q_vec = self.embed_model.encode(
             query,
