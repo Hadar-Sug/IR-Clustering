@@ -12,6 +12,7 @@ def build_pipeline(cfg: Config) -> tuple[Pipeline, dict[str, str], dict[str, dic
     # Initialize loader with explicit paths from config
     dl = DataLoader(
         queries_tsv=cfg.queries_path,
+        top100_gz=cfg.top100_path,
         qrels_txt=cfg.qrels_path,
         docs_trec_gz=cfg.test_docs_path,
     )
