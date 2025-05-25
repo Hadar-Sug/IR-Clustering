@@ -75,6 +75,16 @@ class Pipeline:
         q_vec_prime = self.feedback.refine(qid, q_vec, doc_vecs) if self.feedback else q_vec
 
         # 4) Embedding rerank
-        reranked = self.emb_retriever.search_by_vector(q_vec_prime, k)
+
+        rerank_top_n = 100 
+        if doc_vecs: # Ensure there are documents to rerank
+            reranked = self.emb_retriever.rerank_subset(
+                q_vec_prime, 
+                doc_vecs, 
+                k=min(rerank_top_n, len(doc_vecs))
+            )
+        else:
+            reranked = []
+
 
         return {hit.doc_id: hit.score for hit in reranked}

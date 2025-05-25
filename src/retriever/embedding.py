@@ -86,6 +86,24 @@ class EmbeddingRetriever(Retriever):
             results.append(DocScore(doc_id=self.doc_ids[idx], score=float(score)))
         return results
 
+    def rerank_subset(self, q_vec: np.ndarray, subset_doc_vecs: Dict[str, np.ndarray], k: int) -> List[DocScore]:
+        """Rerank a subset of documents based on their embeddings and a query vector."""
+        if not subset_doc_vecs:
+            return []
+
+        q_vec_norm = q_vec / np.linalg.norm(q_vec) if np.linalg.norm(q_vec) > 0 else q_vec
+
+        scored_docs: List[DocScore] = []
+        for doc_id, doc_vec in subset_doc_vecs.items():
+            doc_vec_norm = doc_vec / np.linalg.norm(doc_vec) if np.linalg.norm(doc_vec) > 0 else doc_vec
+            score = np.dot(q_vec_norm, doc_vec_norm).item()
+            scored_docs.append(DocScore(doc_id=doc_id, score=float(score)))
+
+        # Sort by score in descending order
+        scored_docs.sort(key=lambda x: x.score, reverse=True)
+        
+        return scored_docs[:k]
+
     def search(self, query: str, k: int) -> List[DocScore]:
         """Embed the query string, then proxy to search_by_vector."""
         q_emb = self.model.encode(

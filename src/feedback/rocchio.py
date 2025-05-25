@@ -17,7 +17,6 @@ class RocchioTrueFeedback(FeedbackService):
         self.top_k_relevant_docs = top_k_relevant_docs
     def refine(self, qid, q_vec, doc_vecs):
         # Find relevant doc_ids that are present in doc_vecs
-        print(doc_vecs.keys())
         rel_ids = [d for d, r in self.qrels.get(qid, {}).items() if r > 0 and d in doc_vecs.keys()]
         if not rel_ids:
             print(f"No relevant documents found for query {qid}")

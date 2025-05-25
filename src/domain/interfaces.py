@@ -21,6 +21,10 @@ class Retriever(Protocol):
         """Return the top‐k docs for the given query embedding."""
         ...
 
+    def rerank_subset(self, q_vec: np.ndarray, subset_doc_vecs: Dict[str, np.ndarray], k: int) -> List[DocScore]:
+        """Rerank a subset of documents based on their embeddings and a query vector."""
+        ...
+
 
 class FeedbackService(Protocol):
     def refine(

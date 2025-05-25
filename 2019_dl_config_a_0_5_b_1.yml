@@ -10,9 +10,10 @@ index_path: faiss.index                             # Where to save / load the F
 
 # -------- Model & evaluation parameters --------
 model_name: intfloat/e5-small                       # Sentence-Transformer model
-metrics:                                            # pytrec_eval metrics
-  - ndcg_cut_10
-  - recip_rank
-  - map
+metrics:  # pytrec_eval metrics
+  - ndcg_cut_10    # NDCG@10 over the top-100 :contentReference[oaicite:0]{index=0}
+  - ndcg_cut_100   # NDCG@100 over the top-100 :contentReference[oaicite:1]{index=1}
+  - recip_rank     # MRR (first relevant doc) :contentReference[oaicite:2]{index=2}
+  - map            # AP (Average Precision over all returned docs) :contentReference[oaicite:8]{index=8}
 alpha: 0.5
 beta: 1
