@@ -4,7 +4,7 @@ import csv
 
 from .utils.config import Config
 from .utils.dependencies import build_pipeline, RocchioTrueFeedback
-from retriever.RM3 import PyTerrierRM3Retriever
+from .retriever.RM3 import PyTerrierRM3Retriever
 
 
 if __name__ == "__main__":
