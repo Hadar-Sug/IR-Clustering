@@ -4,7 +4,7 @@ import csv
 
 from .utils.config import Config
 from .utils.dependencies import build_pipeline, RocchioTrueFeedback
-from src.retriever.RM3 import PyTerrierRM3Retriever
+from retriever.RM3 import PyTerrierRM3Retriever
 
 
 if __name__ == "__main__":
@@ -37,7 +37,8 @@ if __name__ == "__main__":
         # Build feedback variants with correct k for top-k relevant
         rocchio3 = RocchioTrueFeedback(qrels, 3, cfg.alpha, cfg.beta)
         rocchio5 = RocchioTrueFeedback(qrels, 5, cfg.alpha, cfg.beta)
-        pt_rm3   = PyTerrierRM3Retriever(corpus)
+        # initialize RM3 with default fb_terms/fb_docs (no corpus argument)
+        pt_rm3 = PyTerrierRM3Retriever()
 
 
         # Assemble configurations for ablation
