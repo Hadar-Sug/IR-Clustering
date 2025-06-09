@@ -1,45 +1,55 @@
-# python
 import pandas as pd
 import pyterrier as pt
 from ..schema import DocScore
 from ..domain.interfaces import Retriever
 
-pt.init()
-
 class PyTerrierRM3Retriever(Retriever):
-    def __init__(self, fb_terms=3, fb_docs=2): # Removed corpus parameter and ret parameter
-        # HARDCODED PATH for testing - replace with a parameter later
-        # Ensure this path points to a directory containing a valid PyTerrier index
-        # (e.g., a directory with data.properties, lexicon.lex, etc.)
-        hardcoded_index_path = "/home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19" # Replace with your actual index path
+    def __init__(self, fb_terms=3, fb_docs=2):
+        # Hard-coded index path
+        hardcoded_index_path = (
+            "/home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19"
+        )
 
-        # Load the index from the specified path
+        # Load the on-disk Terrier index
         try:
-            self.index = pt.IndexFactory.of(hardcoded_index_path)
-            if self.index is None or self.index.getCollectionStatistics() is None: # Basic check
-                raise ValueError(f"Failed to load index or index is empty at {hardcoded_index_path}")
+            idx_ref = pt.IndexRef.of(hardcoded_index_path)
+            # Basic sanity check
+            stats = pt.IndexFactory.of(idx_ref).getCollectionStatistics()
+            if stats is None:
+                raise ValueError("Index loaded but has no collection statistics")
             print(f"Successfully loaded index from {hardcoded_index_path}")
-            print(f"Index statistics: {self.index.getCollectionStatistics().toString()}")
+            print(f"Index stats: {stats.toString()}")
         except Exception as e:
-            print(f"Error loading index from {hardcoded_index_path}: {e}")
-            raise
+            raise RuntimeError(f"Error loading Terrier index: {e}") from e
 
-        # first‐stage BM25
-        bm25 = pt.BatchRetrieve(self.index, wmodel='BM25')
-        # RM3 expansion: pass plain Python ints into the constructor
+        # 1) First-stage BM25 retriever for pseudo-relevance
+        bm25_initial = pt.BatchRetrieve(idx_ref, wmodel="BM25")
+
+        # 2) RM3 query rewriter
         rm3 = pt.rewrite.RM3(
-            self.index,
+            idx_ref,
             fb_terms=int(fb_terms),
             fb_docs=int(fb_docs),
         )
-        # no need for manual fb_terms/fb_docs assignment
-        self.pipeline = bm25 >> rm3
+
+        # 3) Final BM25 retriever on expanded query
+        bm25_final = pt.BatchRetrieve(idx_ref, wmodel="BM25")
+
+        # Compose pipeline: retrieve → expand → retrieve
+        self.pipeline = bm25_initial >> rm3 >> bm25_final
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
-        # prepare a one‐row query DF
-        qdf = pd.DataFrame([{'query': query, 'qid': 'Q0'}])
-        # run RM3 + retrieve
+        # Prepare the query DataFrame
+        qdf = pd.DataFrame([{"qid": "Q0", "query": query}])
+
+        # Run the full pipeline
         res = self.pipeline.transform(qdf)
-        # take top-k results
-        scores = res.nlargest(k, 'score')
-        return [DocScore(row['docno'], float(row['score'])) for _, row in scores.iterrows()]
+
+        # Take the top-k by score
+        topk = res.nlargest(k, "score")
+
+        # Convert to your DocScore domain objects
+        return [
+            DocScore(row["docno"], float(row["score"]))
+            for _, row in topk.iterrows()
+        ]
