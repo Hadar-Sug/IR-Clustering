@@ -7,7 +7,7 @@ from ..domain.interfaces import Retriever
 pt.init()
 
 class PyTerrierRM3Retriever(Retriever):
-    def __init__(self, corpus: dict[str,str], fb_terms=10, fb_docs=10, ret=1000):
+    def __init__(self, corpus: dict[str,str], fb_terms=3, fb_docs=2, ret=5):
         # build a DF for PyTerrier
         df = (
             pd.DataFrame.from_dict(corpus, orient='index', columns=['text'])
