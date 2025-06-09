@@ -32,7 +32,9 @@ def create_index(json_file_path: str, index_path: str, overwrite: bool = False):
         {'docno': str(doc_id), 'text': text}
         for doc_id, text in corpus.items()
     ])
-
+    
+    
+    
     print("Creating index...")
     # Ensure the parent directory for the index exists
     index_parent_dir = os.path.dirname(index_path)

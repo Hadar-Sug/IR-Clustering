@@ -7,15 +7,23 @@ from ..domain.interfaces import Retriever
 pt.init()
 
 class PyTerrierRM3Retriever(Retriever):
-    def __init__(self, corpus: dict[str,str], fb_terms=3, fb_docs=2, ret=5):
-        # build a DF for PyTerrier
-        df = (
-            pd.DataFrame.from_dict(corpus, orient='index', columns=['text'])
-              .reset_index()
-              .rename(columns={'index':'docno'})
-        )
-        # create an in-memory index
-        self.index = pt.IndexDataFrame(df, 'docno', 'text')
+    def __init__(self, fb_terms=3, fb_docs=2, ret=5): # Removed corpus parameter
+        # HARDCODED PATH for testing - replace with a parameter later
+        # Ensure this path points to a directory containing a valid PyTerrier index
+        # (e.g., a directory with data.properties, lexicon.lex, etc.)
+        hardcoded_index_path = "pyterrier_index_19" # Replace with your actual index path
+
+        # Load the index from the specified path
+        try:
+            self.index = pt.IndexFactory.of(hardcoded_index_path)
+            if self.index is None or self.index.getCollectionStatistics() is None: # Basic check
+                raise ValueError(f"Failed to load index or index is empty at {hardcoded_index_path}")
+            print(f"Successfully loaded index from {hardcoded_index_path}")
+            print(f"Index statistics: {self.index.getCollectionStatistics().toString()}")
+        except Exception as e:
+            print(f"Error loading index from {hardcoded_index_path}: {e}")
+            raise
+
         # first‐stage BM25
         bm25 = pt.BatchRetrieve(self.index, wmodel='BM25')
         # RM3 expansion
