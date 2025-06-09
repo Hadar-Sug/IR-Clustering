@@ -4,6 +4,8 @@ import csv
 
 from .utils.config import Config
 from .utils.dependencies import build_pipeline, RocchioTrueFeedback
+from src.retriever.RM3 import PyTerrierRM3Retriever
+
 
 if __name__ == "__main__":
     # Automatically gather all .yml files at the repo root (where main.py's parent is '..')
@@ -35,13 +37,16 @@ if __name__ == "__main__":
         # Build feedback variants with correct k for top-k relevant
         rocchio3 = RocchioTrueFeedback(qrels, 3, cfg.alpha, cfg.beta)
         rocchio5 = RocchioTrueFeedback(qrels, 5, cfg.alpha, cfg.beta)
+        pt_rm3   = PyTerrierRM3Retriever(corpus)
+
 
         # Assemble configurations for ablation
         variants = [
-            ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
-            ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
-            ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
-            ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
+            ("PyTerrier RM3 only",       type(pipe)(pt_rm3,       pt_rm3,         None,     evaluator, embed_model, doc_corpus=corpus))
+            # ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
+            # ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
+            # ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
+            # ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
         ]
 
         final_results = []
