@@ -11,7 +11,7 @@ class PyTerrierRM3Retriever(Retriever):
         # HARDCODED PATH for testing - replace with a parameter later
         # Ensure this path points to a directory containing a valid PyTerrier index
         # (e.g., a directory with data.properties, lexicon.lex, etc.)
-        hardcoded_index_path = "pyterrier_index_19" # Replace with your actual index path
+        hardcoded_index_path = "/home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19" # Replace with your actual index path
 
         # Load the index from the specified path
         try:
