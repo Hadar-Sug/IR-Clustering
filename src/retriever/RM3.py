@@ -7,7 +7,7 @@ from ..domain.interfaces import Retriever
 pt.init()
 
 class PyTerrierRM3Retriever(Retriever):
-    def __init__(self, fb_terms=3, fb_docs=2, ret=5): # Removed corpus parameter
+    def __init__(self, fb_terms=3, fb_docs=2): # Removed corpus parameter and ret parameter
         # HARDCODED PATH for testing - replace with a parameter later
         # Ensure this path points to a directory containing a valid PyTerrier index
         # (e.g., a directory with data.properties, lexicon.lex, etc.)
@@ -27,7 +27,8 @@ class PyTerrierRM3Retriever(Retriever):
         # first‐stage BM25
         bm25 = pt.BatchRetrieve(self.index, wmodel='BM25')
         # RM3 expansion
-        self.pipeline = pt.rewrite.RM3(bm25, fb_terms=fb_terms, fb_docs=fb_docs, ret=ret)
+        # Removed ret=ret from the RM3 call as it's not a valid parameter for pt.rewrite.RM3
+        self.pipeline = pt.rewrite.RM3(bm25, fb_terms=fb_terms, fb_docs=fb_docs)
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
         # prepare a one‐row query DF
