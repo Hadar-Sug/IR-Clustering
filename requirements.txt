@@ -10,4 +10,4 @@ faiss-gpu>=1.7.2
 pytest>=8.2.0
 pytest-mock>=3.14.0
 datasets
-pyterrier>=0.9
+python-terrier>=0.1.5
