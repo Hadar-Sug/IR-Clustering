@@ -26,9 +26,9 @@ class PyTerrierRM3Retriever(Retriever):
 
         # first‐stage BM25
         bm25 = pt.BatchRetrieve(self.index, wmodel='BM25')
-        # RM3 expansion
-        # Removed ret=ret from the RM3 call as it's not a valid parameter for pt.rewrite.RM3
-        self.pipeline = pt.rewrite.RM3(bm25, fb_terms=fb_terms, fb_docs=fb_docs)
+        # RM3 expansion: pass the index to RM3, then chain
+        rm3 = pt.rewrite.RM3(self.index, fb_terms=fb_terms, fb_docs=fb_docs)
+        self.pipeline = bm25 >> rm3
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
         # prepare a one‐row query DF
