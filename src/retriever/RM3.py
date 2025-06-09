@@ -26,8 +26,11 @@ class PyTerrierRM3Retriever(Retriever):
 
         # first‐stage BM25
         bm25 = pt.BatchRetrieve(self.index, wmodel='BM25')
-        # RM3 expansion: pass the index to RM3, then chain
+        # RM3 expansion: pass the index to RM3
         rm3 = pt.rewrite.RM3(self.index, fb_terms=fb_terms, fb_docs=fb_docs)
+        # assign on the Python wrapper so transform can set Java fields properly
+        rm3.fb_terms = int(fb_terms)
+        rm3.fb_docs  = int(fb_docs)
         self.pipeline = bm25 >> rm3
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
