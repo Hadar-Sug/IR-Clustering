@@ -22,8 +22,10 @@ class RocchioTrueFeedback(FeedbackService):
         rel_ids = [d for d, r in self.qrels.get(qid, {}).items() if r > 0 and d in doc_vecs.keys()]
         non_ids = [d for d, r in self.qrels.get(qid, {}).items() if r <= 0 and d in doc_vecs.keys()]
         if not rel_ids and not non_ids:
-            print(f"No relevant/non-relevant documents found for query {qid}")
-
+            # Skip refinement when no feedback information is available
+            # (no relevant or non-relevant documents for this query)
+            pass
+            
         scored_rel = [(d, doc_vecs[d]) for d in rel_ids]
         
         # Use only the first k relevant docs
