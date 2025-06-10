@@ -43,7 +43,11 @@ class DataLoader:
 
         # 3) Qrels - formatted as { qid: { docid: relevance_int, ... }, ... }
         self.qrels: Dict[str, Dict[str, int]] = {}
-        with open(qrels_txt, "r", encoding="utf8") as f:
+        if qrels_txt.endswith(".gz"):
+            qrels_open = lambda p: gzip.open(p, "rt", encoding="utf8")
+        else:
+            qrels_open = lambda p: open(p, "r", encoding="utf8")
+        with qrels_open(qrels_txt) as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) != 4:

@@ -1,86 +1,66 @@
 from pathlib import Path
-import statistics
 import csv
+from typing import Dict
 
 from .utils.config import Config
-from .utils.dependencies import build_pipeline, RocchioTrueFeedback
+from .utils.dependencies import build_pipeline
+from .cross_validation import cv_rm3, cv_embedding
 from .retriever.RM3 import PyTerrierRM3Retriever
+from .evaluator.trec_eval import TrecEvaluator
+
+
+def save_csv(path: Path, rows: list[Dict[str, float]]):
+    if not rows:
+        return
+    header = list(rows[0].keys())
+    with open(path, 'w', newline='', encoding='utf8') as f:
+        writer = csv.DictWriter(f, fieldnames=header)
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(r)
+
+
+def evaluate_test(cfg: Config, rm3_params: Dict[str, float], rocchio_params: Dict[str, float]):
+    pipe, queries, qrels = build_pipeline(cfg, **rocchio_params)
+    queries = {qid: q for qid, q in queries.items() if qid in qrels}
+    run = {}
+    for qid, query in queries.items():
+        run[qid] = pipe.run_query(qid, query, k=100)
+    metrics = pipe.evaluator.evaluate(run, qrels)
+    metric_names = list(next(iter(metrics.values())).keys())
+    agg = {m: sum(v[m] for v in metrics.values()) / len(metrics) for m in metric_names}
+
+    rm3 = PyTerrierRM3Retriever(index_path=cfg.pt_index_path, **rm3_params)
+    rm3_run = {}
+    for qid, query in queries.items():
+        hits = rm3.search(query, k=100)
+        rm3_run[qid] = {h.doc_id: h.score for h in hits}
+    evalr = TrecEvaluator(cfg.metrics)
+    rm3_metrics = evalr.evaluate(rm3_run, qrels)
+    agg_rm3 = {m: sum(v[m] for v in rm3_metrics.values()) / len(rm3_metrics) for m in metric_names}
+    return agg, agg_rm3
 
 
 if __name__ == "__main__":
-    # Automatically gather all .yml files at the repo root (where main.py's parent is '..')
-    root = Path(__file__).parent.parent
-    config_files = [str(f) for f in root.glob("*.yml")]
+    cfg = Config.load(Path("config.yaml"))
 
-    for config_file in config_files:
-        # Load current config
-        cfg = Config.load(Path(config_file))
+    best_rm3, rm3_rows = cv_rm3(cfg, Path(cfg.rm3_results_path))
+    best_rocchio, rocchio_rows = cv_embedding(cfg, Path(cfg.rocchio_results_path))
 
-        # Build main pipeline and get data
-        pipe, queries, qrels = build_pipeline(cfg)
+    save_csv(Path(cfg.rm3_results_path), rm3_rows)
+    save_csv(Path(cfg.rocchio_results_path), rocchio_rows)
 
-        # Filter queries to only those with matching qrels
-        queries = {qid: query for qid, query in queries.items() if qid in qrels}
-        qrels = {qid: qrels[qid] for qid in queries}
+    test_dense, test_rm3 = evaluate_test(cfg, best_rm3, best_rocchio)
 
-        print(f"[bold yellow]\n=== Results for {config_file} ===[/bold yellow]")
-        print(f"Filtered to {len(queries)} queries with matching qrels")
+    save_test = Path(cfg.test_results_path)
+    header = ["metric", "dense", "rm3"]
+    with open(save_test, "w", newline="", encoding="utf8") as f:
+        writer = csv.DictWriter(f, fieldnames=header)
+        writer.writeheader()
+        for m in test_dense:
+            writer.writerow({"metric": m, "dense": test_dense[m], "rm3": test_rm3[m]})
 
-        # Extract ready-built resources/releases from the pipeline for variants
-        bm25 = pipe.first_stage
-        emb_retriever = pipe.emb_retriever
-        embed_model = pipe.embed_model
-        feedback = pipe.feedback
-        evaluator = pipe.evaluator
-        corpus = pipe.doc_corpus
-
-        # Build feedback variants with correct k for top-k relevant
-        rocchio3 = RocchioTrueFeedback(qrels, 3, cfg.alpha, cfg.beta)
-        rocchio5 = RocchioTrueFeedback(qrels, 5, cfg.alpha, cfg.beta)
-        # initialize RM3 with default fb_terms/fb_docs (no corpus argument)
-        pt_rm3 = PyTerrierRM3Retriever()
-
-
-        # Assemble configurations for ablation
-        variants = [
-            ("PyTerrier RM3 only",       type(pipe)(pt_rm3,       pt_rm3,         None,     evaluator, embed_model, doc_corpus=corpus))
-            # ("BM25 retrieval only",      type(pipe)(bm25, bm25,        None,     evaluator, embed_model, doc_corpus=corpus)),
-            # ("E5 dense only",            type(pipe)(emb_retriever, emb_retriever, None,     evaluator, embed_model, doc_corpus=corpus)),
-            # ("E5 + Rocchio (k=3)",       type(pipe)(emb_retriever, emb_retriever, rocchio3, evaluator, embed_model, doc_corpus=corpus)),
-            # ("E5 + Rocchio (k=5)",       type(pipe)(emb_retriever, emb_retriever, rocchio5, evaluator, embed_model, doc_corpus=corpus)),
-        ]
-
-        final_results = []
-
-        for label, pipeline in variants:
-            run = {}
-            for qid, query in list(queries.items()):
-                results = pipeline.run_query(qid, query, k=100)
-                run[qid] = results
-
-            metrics = pipeline.evaluator.evaluate(run, qrels)
-            metric_names = list(next(iter(metrics.values())).keys()) if metrics else []
-
-            macro = {}
-            for metric in metric_names:
-                scores = [qres.get(metric, 0.0) for qres in metrics.values()]
-                macro[metric] = statistics.mean(scores) if scores else 0.0
-
-            macro["label"] = label
-            final_results.append(macro)
-
-        # Print table
-        if final_results:
-            print("\n=== Results Table ===")
-            header = ["label"] + [m for m in final_results[0] if m != "label"]
-            print("\t".join(header))
-            for row in final_results:
-                print("\t".join(f"{row[m]:.4f}" if m != "label" else str(row[m]) for m in header))
-
-            # Save results to a file based on the config file name
-            csv_name = f"{Path(config_file).stem}_results.csv"
-            with open(csv_name, "w", newline="", encoding="utf8") as f:
-                writer = csv.DictWriter(f, fieldnames=header)
-                writer.writeheader()
-                for row in final_results:
-                    writer.writerow({k: row[k] for k in header})
+    print("Best RM3:", best_rm3)
+    print("Best Rocchio:", best_rocchio)
+    print("Test Dense Metrics", test_dense)
+    print("Test RM3 Metrics", test_rm3)
