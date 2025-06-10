@@ -3,6 +3,11 @@ import pyterrier as pt
 from ..schema import DocScore
 from ..domain.interfaces import Retriever
 
+
+def _escape_query(query: str) -> str:
+    """Escape apostrophes so Terrier's parser doesn't choke."""
+    return query.replace("'", "\\'")
+
 class PyTerrierRM3Retriever(Retriever):
     def __init__(self, fb_terms=3, fb_docs=2):
         # 0) Make sure PyTerrier is up and running
@@ -43,7 +48,8 @@ class PyTerrierRM3Retriever(Retriever):
         self.pipeline = bm25_initial >> rm3 >> bm25_final
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
-        qdf = pd.DataFrame([{"qid": "Q0", "query": query}])
+        safe_query = _escape_query(query)
+        qdf = pd.DataFrame([{"qid": "Q0", "query": safe_query}])
         res = self.pipeline.transform(qdf)
         topk = res.nlargest(k, "score")
         return [
