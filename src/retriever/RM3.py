@@ -59,6 +59,9 @@ class PyTerrierRM3Retriever(Retriever):
         safe_query = _sanitize_query(query)
         qdf = pd.DataFrame([{"qid": "Q0", "query": safe_query}])
         res = self.pipeline.transform(qdf)
+        # pipeline may yield scores as strings; ensure numeric for nlargest
+        res["score"] = pd.to_numeric(res["score"], errors="coerce")
+        res = res.dropna(subset=["score"])
         topk = res.nlargest(k, "score")
         return [
             DocScore(row["docno"], float(row["score"]))
