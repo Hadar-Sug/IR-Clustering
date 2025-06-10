@@ -1,4 +1,5 @@
 from sentence_transformers import SentenceTransformer
+from typing import Optional
 
 from .config import Config
 from ..data_loader.loader import DataLoader
@@ -12,9 +13,9 @@ from ..pipeline.pipeline import Pipeline
 def build_pipeline(
     cfg: Config,
     *,
-    alpha: float | None = None,
-    beta: float | None = None,
-    rocchio_k: int | None = None,
+    alpha: Optional[float] = None,
+    beta: Optional[float] = None,
+    rocchio_k: Optional[int] = None,
 ) -> tuple[Pipeline, dict[str, str], dict[str, dict[str, int]]]:
     """Construct the main retrieval pipeline using the configuration."""
     dl = DataLoader(

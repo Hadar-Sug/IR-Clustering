@@ -1,7 +1,7 @@
 from pathlib import Path
 from pydantic import BaseModel, Field
 import yaml
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 class Config(BaseModel):
     queries_path: str = Field(
@@ -44,9 +44,9 @@ class Config(BaseModel):
     cv_folds: int = Field(default=5, description="Number of folds for CV")
 
     # dev set paths
-    dev_queries_path: str | None = None
-    dev_top100_path: str | None = None
-    dev_qrels_path: str | None = None
+    dev_queries_path: Optional[str] = None
+    dev_top100_path: Optional[str] = None
+    dev_qrels_path: Optional[str] = None
 
     # RM3 search grid
     rm3_fb_docs: List[int] = Field(

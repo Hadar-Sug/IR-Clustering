@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 from ..domain.interfaces import Retriever, FeedbackService, Evaluator
 
 from tqdm import tqdm
@@ -21,7 +21,7 @@ class Pipeline:
             feedback: FeedbackService,
             evaluator: Evaluator,
             embed_model,
-            doc_corpus: dict | None = None,
+            doc_corpus: Optional[Dict[str, str]] = None,
             batch_size: int = 64,
             use_fp16: bool = False,
     ):

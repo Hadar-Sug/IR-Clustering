@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Optional
 import os
 import types
 
@@ -34,7 +34,7 @@ class EmbeddingRetriever(Retriever):
         self, 
         model_name: str, 
         corpus: Dict[str, str], 
-        index_path: str | None = None,
+        index_path: Optional[str] = None,
         batch_size: int = 64, 
         use_fp16: bool = False,
     ):
