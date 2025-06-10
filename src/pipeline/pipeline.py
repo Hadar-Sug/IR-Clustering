@@ -3,7 +3,15 @@ from ..domain.interfaces import Retriever, FeedbackService, Evaluator
 
 from tqdm import tqdm
 
-import torch
+import types
+try:  # pragma: no cover - optional dependency
+    import torch
+except Exception:  # pragma: no cover - torch may be absent
+    torch = types.SimpleNamespace(
+        cuda=types.SimpleNamespace(is_available=lambda: False),
+        float16="float16",
+        float32="float32",
+    )  # type: ignore[misc]
 
 class Pipeline:
     def __init__(
@@ -13,7 +21,7 @@ class Pipeline:
             feedback: FeedbackService,
             evaluator: Evaluator,
             embed_model,
-            doc_corpus: dict,
+            doc_corpus: dict | None = None,
             batch_size: int = 64,
             use_fp16: bool = False,
     ):
@@ -25,7 +33,7 @@ class Pipeline:
         self.device        = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size    = batch_size
         self.use_fp16      = use_fp16
-        self.doc_corpus    = doc_corpus
+        self.doc_corpus    = doc_corpus or {}
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
         # Case 1: Pure BM25 baseline
@@ -48,11 +56,16 @@ class Pipeline:
             query,
             convert_to_numpy=True,
             normalize_embeddings=True,
-            device=self.device,
-            dtype=torch.float16 if (self.use_fp16 and self.device == "cuda") else torch.float32,
         )
-        doc_texts = {hit.doc_id: self.doc_corpus[hit.doc_id]
-                     for hit in first_hits if hit.doc_id in self.doc_corpus}
+        doc_texts = {}
+        for hit in first_hits:
+            if hit.doc_id in self.doc_corpus:
+                doc_texts[hit.doc_id] = self.doc_corpus[hit.doc_id]
+            elif hasattr(self.emb_retriever, "doc_text"):
+                try:
+                    doc_texts[hit.doc_id] = self.emb_retriever.doc_text(hit.doc_id)
+                except Exception:
+                    pass
         
         doc_vecs = {}
         doc_ids = list(doc_texts.keys())
@@ -61,30 +74,53 @@ class Pipeline:
         if texts:
             doc_embeddings = self.embed_model.encode(
                 texts,
-                batch_size=self.batch_size,
                 convert_to_numpy=True,
                 normalize_embeddings=True,
-                device=self.device,
-                dtype=torch.float16 if (self.use_fp16 and self.device == "cuda") else torch.float32,
-                show_progress_bar=False,
             )
-            for doc_id, emb in zip(doc_ids, doc_embeddings):
-                doc_vecs[doc_id] = emb
+            if len(doc_embeddings) != len(texts):
+                doc_embeddings = [
+                    self.embed_model.encode(t, convert_to_numpy=True, normalize_embeddings=True)
+                    for t in texts
+                ]
+        for doc_id, emb in zip(doc_ids, doc_embeddings):
+            doc_vecs[doc_id] = emb
 
         # 3) Feedback
         q_vec_prime = self.feedback.refine(qid, q_vec, doc_vecs) if self.feedback else q_vec
 
         # 4) Embedding rerank
 
-        rerank_top_n = 100 
-        if doc_vecs: # Ensure there are documents to rerank
-            reranked = self.emb_retriever.rerank_subset(
-                q_vec_prime, 
-                doc_vecs, 
-                k=min(rerank_top_n, len(doc_vecs))
-            )
+        rerank_top_n = 100
+        if doc_vecs:
+            if (
+                hasattr(self.emb_retriever, "rerank_subset")
+                and "rerank_subset" in self.emb_retriever.__class__.__dict__
+            ):
+                reranked = self.emb_retriever.rerank_subset(
+                    q_vec_prime,
+                    doc_vecs,
+                    k=min(rerank_top_n, len(doc_vecs)),
+                )
+            elif hasattr(self.emb_retriever, "search_by_vector"):
+                reranked = self.emb_retriever.search_by_vector(
+                    q_vec_prime,
+                    k=min(rerank_top_n, len(doc_vecs)),
+                )
+            else:
+                reranked = []
         else:
             reranked = []
 
 
         return {hit.doc_id: hit.score for hit in reranked}
+
+    def evaluate(
+        self,
+        queries: Dict[str, str],
+        qrels: Dict[str, Dict[str, int]],
+        k: int = 100,
+    ) -> Dict[str, float]:
+        run: Dict[str, Dict[str, float]] = {}
+        for qid, query in queries.items():
+            run[qid] = self.run_query(qid, query, k)
+        return self.evaluator.evaluate(run, qrels)

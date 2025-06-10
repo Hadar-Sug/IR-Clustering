@@ -1,5 +1,13 @@
-import pandas as pd
-import pyterrier as pt
+# Heavy optional dependencies -------------------------------------------------
+try:  # pragma: no cover - optional dependency
+    import pandas as pd
+except Exception:  # pragma: no cover - pandas may be absent
+    pd = None  # type: ignore[misc]
+
+try:  # pragma: no cover - optional dependency
+    import pyterrier as pt
+except Exception:  # pragma: no cover - pyterrier may be absent
+    pt = None  # type: ignore[misc]
 from ..schema import DocScore
 from ..domain.interfaces import Retriever
 
@@ -24,6 +32,11 @@ class PyTerrierRM3Retriever(Retriever):
         fb_lambda: float = 0.5,
         index_path: str = "pyterrier_index_19",
     ):
+        if pt is None or pd is None:
+            raise ImportError(
+                "pyterrier and pandas are required for PyTerrierRM3Retriever"
+            )
+
         # 0) Make sure PyTerrier is up and running
         if not pt.started():
             pt.init()

@@ -5,20 +5,24 @@ from ..domain.interfaces import FeedbackService
 
 class RocchioTrueFeedback(FeedbackService):
     def __init__(
-        self, 
+        self,
         qrels: Dict[str, Dict[str, int]],
         top_k_relevant_docs: int = 3,
-        alpha=1.0, 
-        beta=0.75,
+        alpha: float = 1.0,
+        beta: float = 0.75,
+        gamma: float = 0.0,
     ):
         self.qrels = qrels
-        self.alpha, self.beta = alpha, beta
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
         self.top_k_relevant_docs = top_k_relevant_docs
     def refine(self, qid, q_vec, doc_vecs):
         # Find relevant doc_ids that are present in doc_vecs
         rel_ids = [d for d, r in self.qrels.get(qid, {}).items() if r > 0 and d in doc_vecs.keys()]
-        if not rel_ids:
-            print(f"No relevant documents found for query {qid}")
+        non_ids = [d for d, r in self.qrels.get(qid, {}).items() if r <= 0 and d in doc_vecs.keys()]
+        if not rel_ids and not non_ids:
+            print(f"No relevant/non-relevant documents found for query {qid}")
 
         scored_rel = [(d, doc_vecs[d]) for d in rel_ids]
         
@@ -27,12 +31,16 @@ class RocchioTrueFeedback(FeedbackService):
             scored_rel = scored_rel[:self.top_k_relevant_docs]
         
         top_rel_vecs = [vec for _, vec in scored_rel]
+        non_vecs = [doc_vecs[d] for d in non_ids]
 
-        if not top_rel_vecs:
+        if not top_rel_vecs and not non_vecs:
             return q_vec
 
-        # Compute centroid only over top-k relevant docs
-        rel_centroid = np.mean(top_rel_vecs, axis=0)
+        rel_centroid = np.mean(top_rel_vecs, axis=0) if top_rel_vecs else np.zeros_like(q_vec)
+        non_centroid = np.mean(non_vecs, axis=0) if non_vecs else np.zeros_like(q_vec)
 
-        # No non-relevant docs used in the centroidç
-        return self.alpha * q_vec + self.beta * rel_centroid
+        return (
+            self.alpha * q_vec +
+            self.beta * rel_centroid -
+            self.gamma * non_centroid
+        )
