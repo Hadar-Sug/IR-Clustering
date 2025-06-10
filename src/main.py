@@ -2,6 +2,8 @@ from pathlib import Path
 import csv
 from typing import Dict
 
+from transformers.models.esm.modeling_esm import EsmIntermediate
+
 from .utils.config import Config
 from .utils.dependencies import build_pipeline
 from .cross_validation import cv_rm3, cv_embedding
@@ -53,7 +55,7 @@ if __name__ == "__main__":
 
     best_rm3, rm3_rows = cv_rm3(cfg, Path(cfg.rm3_results_path))
     best_rocchio, rocchio_rows = cv_embedding(cfg, Path(cfg.rocchio_results_path))
-
+    exit()
     save_csv(Path(cfg.rm3_results_path), rm3_rows)
     save_csv(Path(cfg.rocchio_results_path), rocchio_rows)
 
