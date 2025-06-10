@@ -14,6 +14,9 @@ class DataLoader:
             docs_trec_gz: str,
             docs_json_path: str,     # ⬅️ Add path argument
     ):
+        if not (os.path.exists(docs_json_path) or os.path.exists(docs_trec_gz)):
+            raise FileNotFoundError(f"Document file not found: {docs_trec_gz}")
+
         # 1) Queries
         self.queries: Dict[str, str] = {}
         if queries_tsv.endswith('.gz'):
