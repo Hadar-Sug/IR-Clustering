@@ -52,8 +52,8 @@ def evaluate_test(
 
 if __name__ == "__main__":
     cfg = Config.load(Path("config.yaml"))
-    exit(0)
     best_rm3, rm3_rows = cv_rm3(cfg, Path(cfg.rm3_results_path))
+    exit(0)
     best_rocchio, rocchio_rows = cv_embedding(cfg, Path(cfg.rocchio_results_path))
     exit()
     save_csv(Path(cfg.rm3_results_path), rm3_rows)
