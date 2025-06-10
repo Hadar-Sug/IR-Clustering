@@ -21,6 +21,7 @@ def _aggregate(metrics: Dict[str, Dict[str, float]], metric_names: List[str]) ->
 
 
 def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict[str, float]]]:
+    print(f"DEBUG: Starting cv_rm3 with cv_folds={cfg.cv_folds}, results_path={results_path}")
     """Grid search RM3 parameters using k-fold CV on the dev set.
     Resumes from ``results_path`` if it already contains evaluated rows."""
     if not (cfg.dev_queries_path and cfg.dev_top100_path and cfg.dev_qrels_path):
@@ -40,6 +41,7 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
     results: List[Dict[str, float]] = []
     done_params = set()
     if results_path.exists():
+        print(f"DEBUG: Resuming from existing results at {results_path}")
         with open(results_path, newline='', encoding='utf8') as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -61,11 +63,15 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
                 'fb_lambda': float(r['fb_lambda'])
             }
 
+    print(f"DEBUG: Initial best_score={best_score}, best_params={best_params}")
     for fb_docs, fb_terms, fb_lambda in param_grid:
+        print(f"DEBUG: Evaluating params fb_docs={fb_docs}, fb_terms={fb_terms}, fb_lambda={fb_lambda}")
         if (fb_docs, fb_terms, fb_lambda) in done_params:
+            print("DEBUG: Params already done, skipping")
             continue
         fold_metrics = []
-        for train_idx, test_idx in kf.split(qids):
+        for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
+            print(f"DEBUG: Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}")
             fold_qids = [qids[i] for i in test_idx]
             fold_qrels = {qid: qrels[qid] for qid in fold_qids}
             rm3 = PyTerrierRM3Retriever(
@@ -84,7 +90,8 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
             fold_metrics.append(_aggregate(metrics, metric_names))
         avg = {m: statistics.mean([fm[m] for fm in fold_metrics]) for m in fold_metrics[0]}
         avg.update({'fb_docs': fb_docs, 'fb_terms': fb_terms, 'fb_lambda': fb_lambda})
-        results.append(avg)
+        print(f"DEBUG: Averaged metrics: {avg}")
+
         file_exists = results_path.exists()
         with open(results_path, 'a', newline='', encoding='utf8') as f:
             writer = csv.DictWriter(f, fieldnames=avg.keys())
@@ -92,14 +99,17 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
                 writer.writeheader()
             writer.writerow(avg)
         done_params.add((fb_docs, fb_terms, fb_lambda))
+        print(f"DEBUG: Appended results for fb_docs={fb_docs}, fb_terms={fb_terms}, fb_lambda={fb_lambda}")
         if avg[cfg.metrics[0]] > best_score:
             best_score = avg[cfg.metrics[0]]
             best_params = {'fb_docs': fb_docs, 'fb_terms': fb_terms, 'fb_lambda': fb_lambda}
+            print(f"DEBUG: New best_score={best_score}, best_params={best_params}")
 
     return best_params, results
 
 
 def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict[str, float]]]:
+    print(f"DEBUG: Starting cv_embedding with cv_folds={cfg.cv_folds}, results_path={results_path}")
     """Grid search Rocchio parameters for the embedding pipeline.
     Resumes from ``results_path`` if available."""
     if not (cfg.dev_queries_path and cfg.dev_top100_path and cfg.dev_qrels_path):
@@ -121,6 +131,7 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
     results: List[Dict[str, float]] = []
     done_params = set()
     if results_path.exists():
+        print(f"DEBUG: Resuming from existing results at {results_path}")
         with open(results_path, newline='', encoding='utf8') as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -142,11 +153,15 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
                 'rocchio_k': int(r['rocchio_k']),
             }
 
+    print(f"DEBUG: Initial best_score={best_score}, best_params={best_params}")
     for alpha, beta, k in param_grid:
+        print(f"DEBUG: Evaluating params alpha={alpha}, beta={beta}, rocchio_k={k}")
         if (alpha, beta, k) in done_params:
+            print("DEBUG: Params already done, skipping")
             continue
         fold_metrics = []
-        for train_idx, test_idx in kf.split(qids):
+        for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
+            print(f"DEBUG: Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}")
             fold_qids = [qids[i] for i in test_idx]
             fold_qrels = {qid: qrels[qid] for qid in fold_qids}
             pipeline, _, _ = build_pipeline(
@@ -160,7 +175,8 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
             fold_metrics.append(_aggregate(metrics, metric_names))
         avg = {m: statistics.mean([fm[m] for fm in fold_metrics]) for m in fold_metrics[0]}
         avg.update({'alpha': alpha, 'beta': beta, 'rocchio_k': k})
-        results.append(avg)
+        print(f"DEBUG: Averaged metrics: {avg}")
+
         file_exists = results_path.exists()
         with open(results_path, 'a', newline='', encoding='utf8') as f:
             writer = csv.DictWriter(f, fieldnames=avg.keys())
@@ -168,8 +184,10 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
                 writer.writeheader()
             writer.writerow(avg)
         done_params.add((alpha, beta, k))
+        print(f"DEBUG: Appended results for alpha={alpha}, beta={beta}, rocchio_k={k}")
         if avg[cfg.metrics[0]] > best_score:
             best_score = avg[cfg.metrics[0]]
             best_params = {'alpha': alpha, 'beta': beta, 'rocchio_k': k}
+            print(f"DEBUG: New best_score={best_score}, best_params={best_params}")
 
     return best_params, results
