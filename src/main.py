@@ -20,8 +20,15 @@ def save_csv(path: Path, rows: list[Dict[str, float]]):
             writer.writerow(r)
 
 
-def evaluate_test(cfg: Config, rm3_params: Dict[str, float], rocchio_params: Dict[str, float]):
-    pipe, queries, qrels = build_pipeline(cfg, **rocchio_params)
+def evaluate_test(
+    cfg: Config, rm3_params: Dict[str, float], rocchio_params: Dict[str, float]
+):
+    pipe, queries, qrels = build_pipeline(
+        cfg,
+        alpha=rocchio_params.get("alpha"),
+        beta=rocchio_params.get("beta"),
+        rocchio_k=rocchio_params.get("rocchio_k"),
+    )
     queries = {qid: q for qid, q in queries.items() if qid in qrels}
     run = {}
     for qid, query in queries.items():

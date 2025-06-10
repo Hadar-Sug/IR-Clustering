@@ -116,7 +116,9 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
     qids = list(queries.keys())
     kf = KFold(n_splits=cfg.cv_folds, shuffle=True, random_state=42)
 
-    param_grid = list(itertools.product(cfg.rocchio_alpha, cfg.rocchio_beta, cfg.rocchio_k))
+    param_grid = list(
+        itertools.product(cfg.rocchio_alpha, cfg.rocchio_beta, cfg.rocchio_k)
+    )
     results: List[Dict[str, float]] = []
     done_params = set()
     if results_path.exists():
@@ -126,16 +128,20 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
                 res = {k: float(v) for k, v in row.items()}
                 res['alpha'] = float(res['alpha'])
                 res['beta'] = float(res['beta'])
-                res['k'] = int(res['k'])
+                res['rocchio_k'] = int(res['rocchio_k'])
                 results.append(res)
-                done_params.add((res['alpha'], res['beta'], res['k']))
+                done_params.add((res['alpha'], res['beta'], res['rocchio_k']))
 
     best_score = float('-inf')
     best_params = {}
     for r in results:
         if r[cfg.metrics[0]] > best_score:
             best_score = r[cfg.metrics[0]]
-            best_params = {'alpha': r['alpha'], 'beta': r['beta'], 'k': int(r['k'])}
+            best_params = {
+                'alpha': r['alpha'],
+                'beta': r['beta'],
+                'rocchio_k': int(r['rocchio_k']),
+            }
 
     for alpha, beta, k in param_grid:
         if (alpha, beta, k) in done_params:
@@ -144,7 +150,9 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
         for train_idx, test_idx in kf.split(qids):
             fold_qids = [qids[i] for i in test_idx]
             fold_qrels = {qid: qrels[qid] for qid in fold_qids}
-            pipeline, _, _ = build_pipeline(dev_cfg, alpha=alpha, beta=beta, rocchio_k=k)
+            pipeline, _, _ = build_pipeline(
+                dev_cfg, alpha=alpha, beta=beta, rocchio_k=k
+            )
             run = {}
             for qid in fold_qids:
                 run[qid] = pipeline.run_query(qid, queries[qid], k=100)
@@ -152,7 +160,7 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
             metric_names = list(next(iter(metrics.values())).keys())
             fold_metrics.append(_aggregate(metrics, metric_names))
         avg = {m: statistics.mean([fm[m] for fm in fold_metrics]) for m in fold_metrics[0]}
-        avg.update({'alpha': alpha, 'beta': beta, 'k': k})
+        avg.update({'alpha': alpha, 'beta': beta, 'rocchio_k': k})
         results.append(avg)
         file_exists = results_path.exists()
         with open(results_path, 'a', newline='', encoding='utf8') as f:
@@ -163,6 +171,6 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
         done_params.add((alpha, beta, k))
         if avg[cfg.metrics[0]] > best_score:
             best_score = avg[cfg.metrics[0]]
-            best_params = {'alpha': alpha, 'beta': beta, 'k': k}
+            best_params = {'alpha': alpha, 'beta': beta, 'rocchio_k': k}
 
     return best_params, results
