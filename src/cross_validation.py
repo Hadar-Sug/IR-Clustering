@@ -33,7 +33,6 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
         'qrels_path': cfg.dev_qrels_path,
     })
     _, queries, qrels = build_pipeline(dev_cfg)
-    exit()
     qids = list(queries.keys())
     kf = KFold(n_splits=cfg.cv_folds, shuffle=True, random_state=42)
 
