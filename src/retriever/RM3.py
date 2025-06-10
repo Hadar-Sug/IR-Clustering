@@ -6,10 +6,15 @@ from ..domain.interfaces import Retriever
 
 def _sanitize_query(query: str) -> str:
     """Remove characters that Terrier's parser dislikes."""
-    # Terrier's query parser trips over apostrophes, even if escaped.
-    # The simplest fix is to remove them entirely.
-    return query.replace("'", "")
-
+    # Strip out apostrophes and punctuation like ?, :, . to avoid parser errors
+    sanitized = (
+        query
+        .replace("'", "")
+        .replace("?", "")
+        .replace(":", "")
+        .replace(".", "")
+    )
+    return sanitized.strip()
 
 class PyTerrierRM3Retriever(Retriever):
     def __init__(self, fb_terms=3, fb_docs=2):
