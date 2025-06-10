@@ -10,6 +10,7 @@ def _sanitize_query(query: str) -> str:
     # The simplest fix is to remove them entirely.
     return query.replace("'", "")
 
+
 class PyTerrierRM3Retriever(Retriever):
     def __init__(self, fb_terms=3, fb_docs=2):
         # 0) Make sure PyTerrier is up and running
