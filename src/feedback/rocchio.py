@@ -1,6 +1,5 @@
 from typing import Dict, Optional
 import numpy as np
-from examples.clirmatrix_example import qrels
 
 from ..domain.interfaces import FeedbackService
 
