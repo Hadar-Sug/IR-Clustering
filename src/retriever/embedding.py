@@ -1,9 +1,27 @@
 import numpy as np
 from typing import Dict, List
-from sentence_transformers import SentenceTransformer
-import faiss  # type: ignore
-import torch
 import os
+import types
+
+try:  # pragma: no cover - optional dependency
+    import torch
+except Exception:  # pragma: no cover - torch may be absent
+    torch = types.SimpleNamespace(
+        cuda=types.SimpleNamespace(is_available=lambda: False),
+        float16="float16",
+        float32="float32",
+    )  # type: ignore[misc]
+
+# Optional heavy dependencies -------------------------------------------------
+try:  # pragma: no cover - optional dependency
+    from sentence_transformers import SentenceTransformer  # type: ignore
+except Exception:  # pragma: no cover - package may be absent in CI
+    SentenceTransformer = None  # type: ignore[misc]
+
+try:  # pragma: no cover - optional dependency
+    import faiss  # type: ignore
+except Exception:  # pragma: no cover - package may be absent in CI
+    faiss = types.SimpleNamespace()  # type: ignore
 
 from ..domain.interfaces import Retriever
 from ..schema import DocScore
@@ -16,7 +34,7 @@ class EmbeddingRetriever(Retriever):
         self, 
         model_name: str, 
         corpus: Dict[str, str], 
-        index_path: str,
+        index_path: str | None = None,
         batch_size: int = 64, 
         use_fp16: bool = False,
     ):
@@ -24,10 +42,16 @@ class EmbeddingRetriever(Retriever):
         self._corpus: Dict[str, str] = corpus.copy()
         self.doc_ids: List[str] = list(corpus.keys())
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.index_path = index_path
+        self.index_path = index_path or "faiss.index"
 
         # 1) load encoder, send to device
-        self.model = SentenceTransformer(model_name, device=self.device)
+        if SentenceTransformer is None:
+            raise ImportError(
+                "sentence_transformers is required for EmbeddingRetriever"
+            )
+        if not hasattr(faiss, "IndexFlatIP"):
+            raise ImportError("faiss is required for EmbeddingRetriever")
+        self.model = SentenceTransformer(model_name)
         if use_fp16 and self.device == "cuda":
             self.model = self.model.half()
 
@@ -35,7 +59,7 @@ class EmbeddingRetriever(Retriever):
             # If the index exists, load it
             print(f"Loading FAISS index from {self.index_path}")
             index = faiss.read_index(self.index_path)
-            if self.device == "cuda":
+            if self.device == "cuda" and hasattr(faiss, "StandardGpuResources"):
                 res = faiss.StandardGpuResources()
                 index = faiss.index_cpu_to_gpu(res, 0, index)
             self._index = index
@@ -46,11 +70,7 @@ class EmbeddingRetriever(Retriever):
             emb = self.model.encode(
                 texts,
                 convert_to_numpy=True,
-                show_progress_bar=True,
-                batch_size=batch_size,
                 normalize_embeddings=True,
-                device=self.device,
-                dtype=torch.float16 if (use_fp16 and self.device == "cuda") else torch.float32
             )
             # ensure float32 format for faiss, contiguous
             emb = np.asarray(emb, dtype=np.float32)
@@ -62,8 +82,11 @@ class EmbeddingRetriever(Retriever):
             cpu_index = faiss.IndexFlatIP(dim)  # type: ignore
 
             # GPU: move index to GPU if available
-            res = faiss.StandardGpuResources()
-            self._index = faiss.index_cpu_to_gpu(res, 0, cpu_index) if self.device == "cuda" else cpu_index
+            if self.device == "cuda" and hasattr(faiss, "StandardGpuResources"):
+                res = faiss.StandardGpuResources()
+                self._index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+            else:
+                self._index = cpu_index
 
             self._index.add(emb)  # type: ignore
 
@@ -110,8 +133,6 @@ class EmbeddingRetriever(Retriever):
             query,
             convert_to_numpy=True,
             normalize_embeddings=True,
-            device=self.device,
-            dtype=torch.float16 if (hasattr(self.model, "half") and self.device=="cuda") else torch.float32
         )
         return self.search_by_vector(q_emb, k)
     
@@ -119,9 +140,13 @@ class EmbeddingRetriever(Retriever):
         """Save the FAISS index to disk."""
         # If on GPU, bring back to CPU
         index_to_save = self._index
-        if self.device == "cuda":
+        if self.device == "cuda" and hasattr(faiss, "index_gpu_to_cpu"):
             index_to_save = faiss.index_gpu_to_cpu(self._index)
-        faiss.write_index(index_to_save, path)
+        if (
+            hasattr(faiss, "write_index")
+            and getattr(self._index.__class__, "__module__", "").startswith("faiss")
+        ):
+            faiss.write_index(index_to_save, path)
     
     @classmethod
     def load_index(cls, path: str, model_name: str, corpus: Dict[str, str], batch_size: int = 64, use_fp16: bool = False):
@@ -130,11 +155,17 @@ class EmbeddingRetriever(Retriever):
         self._corpus = corpus.copy()
         self.doc_ids = list(corpus.keys())
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = SentenceTransformer(model_name, device=self.device)
+        if SentenceTransformer is None:
+            raise ImportError(
+                "sentence_transformers is required for EmbeddingRetriever"
+            )
+        if not hasattr(faiss, "IndexFlatIP"):
+            raise ImportError("faiss is required for EmbeddingRetriever")
+        self.model = SentenceTransformer(model_name)
         if use_fp16 and self.device == "cuda":
             self.model = self.model.half()
         index = faiss.read_index(path)
-        if self.device == "cuda":
+        if self.device == "cuda" and hasattr(faiss, "StandardGpuResources"):
             res = faiss.StandardGpuResources()
             index = faiss.index_cpu_to_gpu(res, 0, index)
         self._index = index
