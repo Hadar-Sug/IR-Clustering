@@ -21,7 +21,15 @@ except Exception:  # pragma: no cover - package may be absent in CI
 try:  # pragma: no cover - optional dependency
     import faiss  # type: ignore
 except Exception:  # pragma: no cover - package may be absent in CI
-    faiss = types.SimpleNamespace()  # type: ignore
+    # Minimal stub so tests can monkeypatch FAISS classes/functions
+    faiss = types.SimpleNamespace(
+        IndexFlatIP=None,
+        StandardGpuResources=None,
+        index_cpu_to_gpu=lambda *a, **k: a[2] if len(a) > 2 else None,
+        index_gpu_to_cpu=lambda x: x,
+        write_index=lambda *a, **k: None,
+        read_index=lambda *a, **k: None,
+    )  # type: ignore[misc]
 
 from ..domain.interfaces import Retriever
 from ..schema import DocScore
