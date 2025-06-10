@@ -3,52 +3,49 @@ import pyterrier as pt
 from ..schema import DocScore
 from ..domain.interfaces import Retriever
 
-
 class PyTerrierRM3Retriever(Retriever):
     def __init__(self, fb_terms=3, fb_docs=2):
-        # Hard-coded index path
+        # 0) Make sure PyTerrier is up and running
+        if not pt.started():
+            pt.init()
+
         hardcoded_index_path = (
             "/home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19"
         )
 
-        # Load the on-disk Terrier index via IndexFactory
+        # 1) Load the index (IndexFactory.of returns a Terrier Index object)
         try:
-            index = pt.IndexFactory.of(hardcoded_index_path)
-            stats = index.getCollectionStatistics()
+            terrier_index = pt.IndexFactory.of(hardcoded_index_path)
+            stats = terrier_index.getCollectionStatistics()
             if stats is None:
-                raise ValueError("Index loaded but has no collection statistics")
-            print(f"Successfully loaded index from {hardcoded_index_path}")
-            print(f"Index stats: {stats.toString()}")
+                raise ValueError("Index has no collection statistics")
+            print(f"Loaded index: {hardcoded_index_path}")
         except Exception as e:
-            raise RuntimeError(f"Error loading Terrier index: {e}") from e
+            raise RuntimeError(f"Could not load Terrier index: {e}") from e
 
-        # 1) First-stage BM25 retriever for pseudo-relevance
-        bm25_initial = pt.BatchRetrieve(index, wmodel="BM25")
+        # 2) Create an IndexRef from the same path (this is what BatchRetrieve & RM3 need)
+        idx_ref = pt.IndexRef.of(hardcoded_index_path)
 
-        # 2) RM3 query rewriter (wrap the BM25 retriever)
+        # 3) First‐stage BM25 for feedback
+        bm25_initial = pt.BatchRetrieve(idx_ref, wmodel="BM25")
+
+        # 4) RM3 rewriter (takes the IndexRef, not a retriever)
         rm3 = pt.rewrite.RM3(
-            bm25_initial,
+            idx_ref,
             fb_terms=int(fb_terms),
             fb_docs=int(fb_docs),
         )
 
-        # 3) Final BM25 retriever on expanded query
-        bm25_final = pt.BatchRetrieve(index, wmodel="BM25")
+        # 5) Final BM25 on the expanded query
+        bm25_final = pt.BatchRetrieve(idx_ref, wmodel="BM25")
 
-        # Compose pipeline: retrieve → expand → retrieve
+        # 6) Chain them: retrieve → rewrite → retrieve
         self.pipeline = bm25_initial >> rm3 >> bm25_final
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
-        # Prepare the query DataFrame
         qdf = pd.DataFrame([{"qid": "Q0", "query": query}])
-
-        # Run the full pipeline
         res = self.pipeline.transform(qdf)
-
-        # Take the top-k by score
         topk = res.nlargest(k, "score")
-
-        # Convert to your DocScore domain objects
         return [
             DocScore(row["docno"], float(row["score"]))
             for _, row in topk.iterrows()
