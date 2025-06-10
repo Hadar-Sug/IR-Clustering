@@ -27,7 +27,7 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
         raise ValueError("Dev set paths must be provided in config")
 
     # load dev data via build_pipeline but we only need queries/qrels
-    dev_cfg = cfg.copy(update={
+    dev_cfg = cfg.model_copy(update={
         'queries_path': cfg.dev_queries_path,
         'top100_path': cfg.dev_top100_path,
         'qrels_path': cfg.dev_qrels_path,
@@ -105,7 +105,7 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
     if not (cfg.dev_queries_path and cfg.dev_top100_path and cfg.dev_qrels_path):
         raise ValueError("Dev set paths must be provided in config")
 
-    dev_cfg = cfg.copy(update={
+    dev_cfg = cfg.model_copy(update={
         'queries_path': cfg.dev_queries_path,
         'top100_path': cfg.dev_top100_path,
         'qrels_path': cfg.dev_qrels_path,
