@@ -1,0 +1,28 @@
+queries_path: msmarco-test2019-queries.tsv.gz
+top100_path: msmarco-doctest2019-top100.gz
+qrels_path: 2019qrels-docs.txt
+test_docs_path: msmarco-docs.tsv.gz
+docs_json_path: docs.json
+model_name: intfloat/e5-small
+pt_index_path: pyterrier_index_19
+index_path: faiss.index
+metrics:
+  - ndcg_cut_10
+  - ndcg_cut_100
+  - recip_rank
+  - map
+alpha: 1.0
+beta: 0.75
+cv_folds: 5
+dev_queries_path: msmarco-docdev-queries2019.tsv.gz
+dev_top100_path: dev-top-100-2019.gz
+dev_qrels_path: msmarco-docdev-qrels-2019.tsv.gz
+rm3_fb_docs: [5, 10, 20, 50, 100]
+rm3_fb_terms: [10, 20, 50, 100]
+rm3_fb_lambda: [0.3, 0.5, 0.7, 0.8, 0.9]
+rocchio_alpha: [0.5, 0.8, 1.0, 1.2]
+rocchio_beta: [0.5, 0.75, 1.0, 1.25]
+rocchio_k: [5, 10, 20, 50, 100]
+rm3_results_path: rm3_cv_results.csv
+rocchio_results_path: rocchio_cv_results.csv
+test_results_path: test_results.csv

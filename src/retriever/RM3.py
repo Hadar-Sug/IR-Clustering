@@ -17,27 +17,31 @@ def _sanitize_query(query: str) -> str:
     return sanitized.strip()
 
 class PyTerrierRM3Retriever(Retriever):
-    def __init__(self, fb_terms=3, fb_docs=2):
+    def __init__(
+        self,
+        fb_terms: int = 3,
+        fb_docs: int = 2,
+        fb_lambda: float = 0.5,
+        index_path: str = "pyterrier_index_19",
+    ):
         # 0) Make sure PyTerrier is up and running
         if not pt.started():
             pt.init()
 
-        hardcoded_index_path = (
-            "/home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19"
-        )
+        index_dir = index_path
 
         # 1) Load the index (IndexFactory.of returns a Terrier Index object)
         try:
-            terrier_index = pt.IndexFactory.of(hardcoded_index_path)
+            terrier_index = pt.IndexFactory.of(index_dir)
             stats = terrier_index.getCollectionStatistics()
             if stats is None:
                 raise ValueError("Index has no collection statistics")
-            print(f"Loaded index: {hardcoded_index_path}")
+            print(f"Loaded index: {index_dir}")
         except Exception as e:
             raise RuntimeError(f"Could not load Terrier index: {e}") from e
 
         # 2) Create an IndexRef from the same path (this is what BatchRetrieve & RM3 need)
-        idx_ref = pt.IndexRef.of(hardcoded_index_path)
+        idx_ref = pt.IndexRef.of(index_dir)
 
         # 3) First‐stage BM25 for feedback
         bm25_initial = pt.BatchRetrieve(idx_ref, wmodel="BM25")
@@ -47,6 +51,7 @@ class PyTerrierRM3Retriever(Retriever):
             idx_ref,
             fb_terms=int(fb_terms),
             fb_docs=int(fb_docs),
+            fb_lambda=float(fb_lambda),
         )
 
         # 5) Final BM25 on the expanded query

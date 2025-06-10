@@ -7,6 +7,7 @@ docs_json_path: docs.json                     # JSON file with docid and content
 
 # -------- FAISS index --------
 index_path: faiss.index                             # Where to save / load the FAISS index
+pt_index_path: pyterrier_index_19                   # PyTerrier index directory
 
 # -------- Model & evaluation parameters --------
 model_name: intfloat/e5-small                       # Sentence-Transformer model
