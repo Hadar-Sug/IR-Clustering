@@ -10,7 +10,8 @@ from .retriever.RM3 import PyTerrierRM3Retriever
 if __name__ == "__main__":
     # Automatically gather all .yml files at the repo root (where main.py's parent is '..')
     root = Path(__file__).parent.parent
-    config_files = [str(f) for f in root.glob("*.yml")]
+    # Explicitly evaluate only the 2019 configuration
+    config_files = [str(root / "2019_dl_config.yml")]
 
     for config_file in config_files:
         # Load current config
@@ -54,7 +55,8 @@ if __name__ == "__main__":
 
         for label, pipeline in variants:
             run = {}
-            for qid, query in list(queries.items())[:2]:
+            # Evaluate over all queries
+            for qid, query in queries.items():
                 results = pipeline.run_query(qid, query, k=5)
                 run[qid] = results
 
