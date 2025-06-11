@@ -4,7 +4,7 @@ qrels_path: 2019qrels-docs.txt
 test_docs_path: msmarco-docs.tsv.gz
 docs_json_path: docs.json
 model_name: intfloat/e5-small
-pt_index_path: pyterrier_index_19
+pt_index_path: /home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19
 index_path: faiss.index
 metrics:
   - ndcg_cut_10
