@@ -48,7 +48,11 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
         'top100_path': cfg.dev_top100_path,
         'qrels_path': cfg.dev_qrels_path,
     })
-    _, queries, qrels = build_pipeline(dev_cfg)
+    try:
+        _, queries, qrels = build_pipeline(dev_cfg)
+    except Exception:
+        logger.exception("Failed to build pipeline for RM3 CV")
+        raise
     qids = list(queries.keys())
     kf = KFold(n_splits=cfg.cv_folds, shuffle=True, random_state=42)
 
@@ -149,7 +153,11 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
         'top100_path': cfg.dev_top100_path,
         'qrels_path': cfg.dev_qrels_path,
     })
-    pipe, queries, qrels = build_pipeline(dev_cfg)
+    try:
+        pipe, queries, qrels = build_pipeline(dev_cfg)
+    except Exception:
+        logger.exception("Failed to build pipeline for embedding CV")
+        raise
 
     qids = list(queries.keys())
     kf = KFold(n_splits=cfg.cv_folds, shuffle=True, random_state=42)
@@ -225,6 +233,7 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
             if not file_exists:
                 writer.writeheader()
             writer.writerow(avg)
+        results.append(avg)
         done_params.add((alpha, beta, k))
         logger.debug(f"Appended results for alpha={alpha}, beta={beta}, rocchio_k={k}")
         if avg[cfg.metrics[0]] > best_score:
