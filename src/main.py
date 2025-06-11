@@ -1,8 +1,9 @@
 from pathlib import Path
 import csv
 from typing import Dict
+import logging
 
-from transformers.models.esm.modeling_esm import EsmIntermediate
+logger = logging.getLogger(__name__)
 
 from .utils.config import Config
 from .utils.dependencies import build_pipeline
@@ -51,12 +52,21 @@ def evaluate_test(
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s:%(message)s",
+    )
     cfg = Config.load(Path("config.yaml"))
+    logger.debug("Configuration loaded")
+
+    logger.debug("Starting RM3 cross validation")
     best_rm3, rm3_rows = cv_rm3(cfg, Path(cfg.rm3_results_path))
+    logger.debug("Starting embedding cross validation")
     best_rocchio, rocchio_rows = cv_embedding(cfg, Path(cfg.rocchio_results_path))
     save_csv(Path(cfg.rm3_results_path), rm3_rows)
     save_csv(Path(cfg.rocchio_results_path), rocchio_rows)
 
+    logger.debug("Evaluating on test set")
     test_dense, test_rm3 = evaluate_test(cfg, best_rm3, best_rocchio)
 
     save_test = Path(cfg.test_results_path)
@@ -67,6 +77,7 @@ if __name__ == "__main__":
         for m in test_dense:
             writer.writerow({"metric": m, "dense": test_dense[m], "rm3": test_rm3[m]})
 
+    logger.debug("Finished evaluation")
     print("Best RM3:", best_rm3)
     print("Best Rocchio:", best_rocchio)
     print("Test Dense Metrics", test_dense)
