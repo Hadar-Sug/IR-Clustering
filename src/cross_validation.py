@@ -106,7 +106,17 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
                 )
                 run = {}
                 for qid in fold_qids:
-                    hits = rm3.search(queries[qid], k=100)
+                    try:
+                        hits = rm3.search(queries[qid], k=100)
+                    except Exception:
+                        logger.exception(
+                            "Search failed for qid %s with fb_docs=%s fb_terms=%s fb_lambda=%s",
+                            qid,
+                            fb_docs,
+                            fb_terms,
+                            fb_lambda,
+                        )
+                        continue
                     run[qid] = {h.doc_id: h.score for h in hits}
                 evalr = TrecEvaluator(cfg.metrics)
                 metrics = evalr.evaluate(run, fold_qrels)
