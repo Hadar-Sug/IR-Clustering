@@ -10,21 +10,17 @@ except Exception:  # pragma: no cover - pyterrier may be absent
     pt = None  # type: ignore[misc]
 from ..schema import DocScore
 from ..domain.interfaces import Retriever
+import re
+import string
 
 
 def _sanitize_query(query: str) -> str:
-    """Remove characters that Terrier's parser dislikes."""
-    # Strip out apostrophes and punctuation like ?, :, . to avoid parser errors
-    sanitized = (
-        query
-        .replace("'", "")
-        .replace("?", "")
-        .replace(":", "")
-        .replace(".", "")
-        .replace("/", "")  # remove slashes
+    """Remove all punctuation so Terrier’s parser won’t choke."""
+    # replace any punctuation char with space
+    sanitized = re.sub(f"[{re.escape(string.punctuation)}]", " ", query)
+    # collapse multiple spaces and trim
+    return " ".join(sanitized.split())
 
-    )
-    return sanitized.strip()
 
 class PyTerrierRM3Retriever(Retriever):
     def __init__(
@@ -77,6 +73,9 @@ class PyTerrierRM3Retriever(Retriever):
 
     def search(self, query: str, k: int = 100) -> list[DocScore]:
         safe_query = _sanitize_query(query)
+        # skip if query became empty after sanitization (avoids Terrier NPE)
+        if not safe_query:
+            return []
         qdf = pd.DataFrame([{"qid": "Q0", "query": safe_query}])
         res = self.pipeline.transform(qdf)
         # pipeline may yield scores as strings; ensure numeric for nlargest
