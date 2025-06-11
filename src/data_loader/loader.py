@@ -89,7 +89,7 @@ class DataLoader:
         # Sanity check (existing)
         missing = self.doc_ids - self.docs.keys()
         if missing:
-            raise RuntimeError(f"Missing {len(missing)} docs in {docs_trec_gz}: {missing}")
+            raise RuntimeError(f"Missing {len(missing)} docs in {docs_trec_gz}: {len(missing)}")
 
     def load_queries(self) -> Dict[str, str]:
         return self.queries
