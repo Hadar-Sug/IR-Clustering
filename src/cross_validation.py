@@ -6,13 +6,17 @@ from pathlib import Path
 
 import logging
 
-# --- new: configure logging to a file ---
+# --- new: configure logging to both file and console ---
 logging.basicConfig(
-    filename='cv_debug.log',
+    filename="cv_debug.log",
     level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s:%(message)s'
+    format="%(asctime)s %(levelname)s:%(message)s",
 )
 logger = logging.getLogger(__name__)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s:%(message)s"))
+logger.addHandler(console_handler)
 # --- end new ---
 
 from sklearn.model_selection import KFold
@@ -76,29 +80,42 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
 
     logger.debug(f"Initial best_score={best_score}, best_params={best_params}")
     for fb_docs, fb_terms, fb_lambda in param_grid:
-        logger.debug(f"Evaluating params fb_docs={fb_docs}, fb_terms={fb_terms}, fb_lambda={fb_lambda}")
+        logger.debug(
+            f"Evaluating params fb_docs={fb_docs}, fb_terms={fb_terms}, fb_lambda={fb_lambda}"
+        )
         if (fb_docs, fb_terms, fb_lambda) in done_params:
             logger.debug("Params already done, skipping")
             continue
         fold_metrics = []
-        for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
-            logger.debug(f"Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}")
-            fold_qids = [qids[i] for i in test_idx]
-            fold_qrels = {qid: qrels[qid] for qid in fold_qids}
-            rm3 = PyTerrierRM3Retriever(
-                fb_terms=fb_terms,
-                fb_docs=fb_docs,
-                fb_lambda=fb_lambda,
-                index_path=cfg.pt_index_path,
+        try:
+            for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
+                logger.debug(
+                    f"Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}"
+                )
+                fold_qids = [qids[i] for i in test_idx]
+                fold_qrels = {qid: qrels[qid] for qid in fold_qids}
+                rm3 = PyTerrierRM3Retriever(
+                    fb_terms=fb_terms,
+                    fb_docs=fb_docs,
+                    fb_lambda=fb_lambda,
+                    index_path=cfg.pt_index_path,
+                )
+                run = {}
+                for qid in fold_qids:
+                    hits = rm3.search(queries[qid], k=100)
+                    run[qid] = {h.doc_id: h.score for h in hits}
+                evalr = TrecEvaluator(cfg.metrics)
+                metrics = evalr.evaluate(run, fold_qrels)
+                metric_names = list(next(iter(metrics.values())).keys())
+                fold_metrics.append(_aggregate(metrics, metric_names))
+        except Exception:
+            logger.exception(
+                "Exception during evaluation for fb_docs=%s fb_terms=%s fb_lambda=%s",
+                fb_docs,
+                fb_terms,
+                fb_lambda,
             )
-            run = {}
-            for qid in fold_qids:
-                hits = rm3.search(queries[qid], k=100)
-                run[qid] = {h.doc_id: h.score for h in hits}
-            evalr = TrecEvaluator(cfg.metrics)
-            metrics = evalr.evaluate(run, fold_qrels)
-            metric_names = list(next(iter(metrics.values())).keys())
-            fold_metrics.append(_aggregate(metrics, metric_names))
+            continue
         avg = {m: statistics.mean([fm[m] for fm in fold_metrics]) for m in fold_metrics[0]}
         avg.update({'fb_docs': fb_docs, 'fb_terms': fb_terms, 'fb_lambda': fb_lambda})
         logger.debug(f"Averaged metrics: {avg}")
@@ -109,6 +126,7 @@ def cv_rm3(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], List[Dict
             if not file_exists:
                 writer.writeheader()
             writer.writerow(avg)
+        results.append(avg)
         done_params.add((fb_docs, fb_terms, fb_lambda))
         logger.debug(f"Appended results for fb_docs={fb_docs}, fb_terms={fb_terms}, fb_lambda={fb_lambda}")
         if avg[cfg.metrics[0]] > best_score:
@@ -166,24 +184,37 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
 
     logger.debug(f"Initial best_score={best_score}, best_params={best_params}")
     for alpha, beta, k in param_grid:
-        logger.debug(f"Evaluating params alpha={alpha}, beta={beta}, rocchio_k={k}")
+        logger.debug(
+            f"Evaluating params alpha={alpha}, beta={beta}, rocchio_k={k}"
+        )
         if (alpha, beta, k) in done_params:
             logger.debug("Params already done, skipping")
             continue
         fold_metrics = []
-        for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
-            logger.debug(f"Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}")
-            fold_qids = [qids[i] for i in test_idx]
-            fold_qrels = {qid: qrels[qid] for qid in fold_qids}
-            pipeline, _, _ = build_pipeline(
-                dev_cfg, alpha=alpha, beta=beta, rocchio_k=k
+        try:
+            for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
+                logger.debug(
+                    f"Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}"
+                )
+                fold_qids = [qids[i] for i in test_idx]
+                fold_qrels = {qid: qrels[qid] for qid in fold_qids}
+                pipeline, _, _ = build_pipeline(
+                    dev_cfg, alpha=alpha, beta=beta, rocchio_k=k
+                )
+                run = {}
+                for qid in fold_qids:
+                    run[qid] = pipeline.run_query(qid, queries[qid], k=100)
+                metrics = pipeline.evaluator.evaluate(run, fold_qrels)
+                metric_names = list(next(iter(metrics.values())).keys())
+                fold_metrics.append(_aggregate(metrics, metric_names))
+        except Exception:
+            logger.exception(
+                "Exception during evaluation for alpha=%s beta=%s rocchio_k=%s",
+                alpha,
+                beta,
+                k,
             )
-            run = {}
-            for qid in fold_qids:
-                run[qid] = pipeline.run_query(qid, queries[qid], k=100)
-            metrics = pipeline.evaluator.evaluate(run, fold_qrels)
-            metric_names = list(next(iter(metrics.values())).keys())
-            fold_metrics.append(_aggregate(metrics, metric_names))
+            continue
         avg = {m: statistics.mean([fm[m] for fm in fold_metrics]) for m in fold_metrics[0]}
         avg.update({'alpha': alpha, 'beta': beta, 'rocchio_k': k})
         logger.debug(f"Averaged metrics: {avg}")
