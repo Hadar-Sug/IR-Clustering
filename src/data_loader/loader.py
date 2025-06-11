@@ -71,8 +71,8 @@ class DataLoader:
                     self.docs = json.load(jf)
                 except json.JSONDecodeError:
                     self.docs = {}
-        else:
-            # Normal loading from gz file
+        if not self.docs:
+            # Normal loading from gz file if json missing or invalid
             with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
                 for line in f:
                     parts = line.rstrip("\n").split("\t")
@@ -85,11 +85,32 @@ class DataLoader:
             # dump to json for future use
             with open(self.json_path, "w", encoding="utf8") as jf:
                 json.dump(self.docs, jf)
+        else:
+            # Ensure all required docs are present; load missing ones from gz if available
+            missing_ids = self.doc_ids - self.docs.keys()
+            if missing_ids and os.path.exists(docs_trec_gz):
+                with gzip.open(docs_trec_gz, "rt", encoding="utf8") as f:
+                    for line in f:
+                        parts = line.rstrip("\n").split("\t")
+                        if len(parts) < 2:
+                            continue
+                        docid = parts[0]
+                        text = parts[-1]
+                        if docid in missing_ids:
+                            self.docs[docid] = text
+                            missing_ids.remove(docid)
+                            if not missing_ids:
+                                break
+                with open(self.json_path, "w", encoding="utf8") as jf:
+                    json.dump(self.docs, jf)
 
         # Sanity check (existing)
         missing = self.doc_ids - self.docs.keys()
         if missing:
-            raise RuntimeError(f"Missing {len(missing)} docs in {docs_trec_gz}: {len(missing)}")
+            sample = ", ".join(sorted(missing)[:5])
+            raise RuntimeError(
+                f"Missing {len(missing)} docs in {docs_trec_gz}: {sample}"
+            )
 
     def load_queries(self) -> Dict[str, str]:
         return self.queries
