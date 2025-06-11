@@ -21,6 +21,8 @@ def _sanitize_query(query: str) -> str:
         .replace("?", "")
         .replace(":", "")
         .replace(".", "")
+        .replace("/", "")  # remove slashes
+
     )
     return sanitized.strip()
 
