@@ -169,6 +169,26 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
         logger.exception("Failed to build pipeline for embedding CV")
         raise
 
+    # Precompute embeddings for all queries and documents
+    pipe.query_vecs = {
+        qid: pipe.embed_model.encode(
+            text,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        for qid, text in queries.items()
+    }
+    pipe.doc_vecs = {
+        doc_id: pipe.embed_model.encode(
+            text,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        for doc_id, text in pipe.doc_corpus.items()
+    }
+
     qids = list(queries.keys())
     kf = KFold(n_splits=cfg.cv_folds, shuffle=True, random_state=42)
 
@@ -210,19 +230,21 @@ def cv_embedding(cfg: Config, results_path: Path) -> Tuple[Dict[str, float], Lis
             continue
         fold_metrics = []
         try:
+            # update feedback parameters on the existing pipeline
+            pipe.feedback.alpha = alpha
+            pipe.feedback.beta = beta
+            pipe.feedback.top_k_relevant_docs = k
+
             for fold_idx, (train_idx, test_idx) in enumerate(kf.split(qids), start=1):
                 logger.debug(
                     f"Fold {fold_idx}/{cfg.cv_folds}, test size={len(test_idx)}"
                 )
                 fold_qids = [qids[i] for i in test_idx]
                 fold_qrels = {qid: qrels[qid] for qid in fold_qids}
-                pipeline, _, _ = build_pipeline(
-                    dev_cfg, alpha=alpha, beta=beta, rocchio_k=k
-                )
                 run = {}
                 for qid in fold_qids:
-                    run[qid] = pipeline.run_query(qid, queries[qid], k=100)
-                metrics = pipeline.evaluator.evaluate(run, fold_qrels)
+                    run[qid] = pipe.run_query(qid, queries[qid], k=100)
+                metrics = pipe.evaluator.evaluate(run, fold_qrels)
                 metric_names = list(next(iter(metrics.values())).keys())
                 fold_metrics.append(_aggregate(metrics, metric_names))
         except Exception:

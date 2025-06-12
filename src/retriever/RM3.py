@@ -16,8 +16,10 @@ import string
 
 def _sanitize_query(query: str) -> str:
     """Remove all punctuation so Terrier’s parser won’t choke."""
-    # replace any punctuation char with space
-    sanitized = re.sub(f"[{re.escape(string.punctuation)}]", " ", query)
+    # remove apostrophes entirely, replace other punctuation with space
+    no_apost = query.replace("'", "")
+    punct_without_apost = string.punctuation.replace("'", "")
+    sanitized = re.sub(f"[{re.escape(punct_without_apost)}]", " ", no_apost)
     # collapse multiple spaces and trim
     return " ".join(sanitized.split())
 
