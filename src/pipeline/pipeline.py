@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+import numpy as np
 from ..domain.interfaces import Retriever, FeedbackService, Evaluator
 
 from tqdm import tqdm
@@ -24,6 +25,8 @@ class Pipeline:
             doc_corpus: Optional[Dict[str, str]] = None,
             batch_size: int = 64,
             use_fp16: bool = False,
+            query_vecs: Optional[Dict[str, "np.ndarray"]] = None,
+            doc_vecs: Optional[Dict[str, "np.ndarray"]] = None,
     ):
         self.first_stage   = retriever_init
         self.emb_retriever = emb_retriever
@@ -34,6 +37,9 @@ class Pipeline:
         self.batch_size    = batch_size
         self.use_fp16      = use_fp16
         self.doc_corpus    = doc_corpus or {}
+        # caches for pre-computed embeddings
+        self.query_vecs    = query_vecs or {}
+        self.doc_vecs      = doc_vecs or {}
 
     def run_query(self, qid: str, query: str, k: int) -> Dict[str, float]:
         # Case 1: Pure BM25 baseline
@@ -52,11 +58,23 @@ class Pipeline:
         first_hits = self.first_stage.search(query, k)
 
         # 2) Embed query & docs
-        q_vec = self.embed_model.encode(
-            query,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-        )
+        if qid in self.query_vecs:
+            q_vec = self.query_vecs[qid]
+        else:
+            try:
+                q_vec = self.embed_model.encode(
+                    query,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
+                )
+            except TypeError:
+                q_vec = self.embed_model.encode(
+                    query,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                )
+            self.query_vecs[qid] = q_vec
         doc_texts = {}
         for hit in first_hits:
             if hit.doc_id in self.doc_corpus:
@@ -71,19 +89,50 @@ class Pipeline:
         doc_ids = list(doc_texts.keys())
         texts = list(doc_texts.values())
 
-        if texts:
-            doc_embeddings = self.embed_model.encode(
-                texts,
-                convert_to_numpy=True,
-                normalize_embeddings=True,
-            )
-            if len(doc_embeddings) != len(texts):
-                doc_embeddings = [
-                    self.embed_model.encode(t, convert_to_numpy=True, normalize_embeddings=True)
-                    for t in texts
-                ]
-        for doc_id, emb in zip(doc_ids, doc_embeddings):
-            doc_vecs[doc_id] = emb
+        uncached_ids = []
+        uncached_texts = []
+        for doc_id, text in zip(doc_ids, texts):
+            if doc_id in self.doc_vecs:
+                doc_vecs[doc_id] = self.doc_vecs[doc_id]
+            else:
+                uncached_ids.append(doc_id)
+                uncached_texts.append(text)
+
+        if uncached_texts:
+            try:
+                doc_embeddings = self.embed_model.encode(
+                    uncached_texts,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                    show_progress_bar=False,
+                )
+            except TypeError:
+                doc_embeddings = self.embed_model.encode(
+                    uncached_texts,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                )
+            if len(doc_embeddings) != len(uncached_texts):
+                tmp_embeds = []
+                for t in uncached_texts:
+                    try:
+                        vec = self.embed_model.encode(
+                            t,
+                            convert_to_numpy=True,
+                            normalize_embeddings=True,
+                            show_progress_bar=False,
+                        )
+                    except TypeError:
+                        vec = self.embed_model.encode(
+                            t,
+                            convert_to_numpy=True,
+                            normalize_embeddings=True,
+                        )
+                    tmp_embeds.append(vec)
+                doc_embeddings = tmp_embeds
+            for doc_id, emb in zip(uncached_ids, doc_embeddings):
+                self.doc_vecs[doc_id] = emb
+                doc_vecs[doc_id] = emb
 
         # 3) Feedback
         q_vec_prime = self.feedback.refine(qid, q_vec, doc_vecs) if self.feedback else q_vec
