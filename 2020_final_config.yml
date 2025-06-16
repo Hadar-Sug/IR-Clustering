@@ -7,7 +7,7 @@ docs_json_path: docs2020.json                     # JSON file with docid and con
 
 # -------- FAISS index --------
 index_path: faiss2020.index                             # Where to save / load the FAISS index
-pt_index_path: pyterrier_index_20                       # PyTerrier index directory
+pt_index_path: /home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_20                       # PyTerrier index directory
 
 # -------- Model & evaluation parameters --------
 model_name: intfloat/e5-small                       # Sentence-Transformer model
