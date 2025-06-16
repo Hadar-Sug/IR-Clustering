@@ -18,3 +18,4 @@ metrics:  # pytrec_eval metrics
   - map            # AP (Average Precision over all returned docs) :contentReference[oaicite:8]{index=8}
 alpha: 0.5
 beta: 1.25
+rocchio_k: [5,10,20,50,100]
