@@ -111,10 +111,9 @@ def run(cfg_path: str, out_csv: str, out_tex: str) -> None:
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Run final test evaluation")
-    parser.add_argument("config", help="Path to YAML config")
-    parser.add_argument("--csv", default="final_results.csv", help="CSV output path")
-    parser.add_argument("--tex", default="final_results.tex", help="LaTeX output path")
-    args = parser.parse_args()
-    run(args.config, args.csv, args.tex)
+    # Iterate over the two test configs and write per-year results
+    for cfg_path in ["2019_final_config.yml", "2020_final_config.yml"]:
+        year = Path(cfg_path).stem.split("_")[0]
+        csv_path = f"final_results_{year}.csv"
+        tex_path = f"final_results_{year}.tex"
+        run(cfg_path, csv_path, tex_path)
