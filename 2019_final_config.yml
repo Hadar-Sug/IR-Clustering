@@ -1,0 +1,21 @@
+# -------- Data paths (TREC DL-2019) --------
+queries_path: msmarco-test2019-queries.tsv.gz      # Gzipped TSV: qid<TAB>query
+top100_path: msmarco-doctest2019-top100.gz         # Gzipped run: qid Q0 docid rank score
+qrels_path: 2019qrels-docs.txt                     # Plain-text qrels: qid Q0 docid rating
+test_docs_path: msmarco-docs.tsv.gz                # Gzipped TREC collection (TSV)
+docs_json_path: docs.json                     # JSON file with docid and content
+
+# -------- FAISS index --------
+index_path: faiss.index                             # Where to save / load the FAISS index
+pt_index_path: /home/doadmin/Documents/ML/hadar/IR-Clustering/pyterrier_index_19                   # PyTerrier index directory
+
+# -------- Model & evaluation parameters --------
+model_name: intfloat/e5-small                       # Sentence-Transformer model
+metrics:  # pytrec_eval metrics
+  - ndcg_cut_10    # NDCG@10 over the top-100 :contentReference[oaicite:0]{index=0}
+  - ndcg_cut_100   # NDCG@100 over the top-100 :contentReference[oaicite:1]{index=1}
+  - recip_rank     # MRR (first relevant doc) :contentReference[oaicite:2]{index=2}
+  - map            # AP (Average Precision over all returned docs) :contentReference[oaicite:8]{index=8}
+alpha: 0.5
+beta: 1.25
+rocchio_k: [5,10,20,50,100]
