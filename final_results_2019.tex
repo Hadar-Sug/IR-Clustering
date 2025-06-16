@@ -1,0 +1,14 @@
+\begin{tabular}{lrrrr}
+\toprule
+label & map & recip_rank & ndcg_cut_10 & ndcg_cut_100 \\
+\midrule
+BM25 retrieval only & 0.2110 & 0.7990 & 0.4490 & 0.4538 \\
+E5 dense only & 0.2229 & 0.9205 & 0.6220 & 0.4837 \\
+E5 + Rocchio (k=5) & 0.2658 & 1.0000 & 0.6386 & 0.4903 \\
+E5 + Rocchio (k=10) & 0.2694 & 0.9767 & 0.6653 & 0.5010 \\
+E5 + Rocchio (k=20) & 0.2688 & 0.9651 & 0.6666 & 0.4980 \\
+E5 + Rocchio (k=50) & 0.2690 & 0.9651 & 0.6663 & 0.4986 \\
+E5 + Rocchio (k=100) & 0.2691 & 0.9651 & 0.6675 & 0.4988 \\
+RM3 & 0.2511 & 0.8576 & 0.5608 & 0.5096 \\
+\bottomrule
+\end{tabular}
